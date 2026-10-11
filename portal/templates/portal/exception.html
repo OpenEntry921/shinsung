@@ -1,0 +1,1 @@
+{% extends 'portal/base.html' %}{% block content %}<div class="narrow"><h1>개인용 일회성 접속</h1><p>관리자의 별도 신원 확인 후 발급받은 개인용 접속 수단입니다. 15분 후 만료되며 한 번만 사용할 수 있습니다.</p><p class="error">{{ error }}</p><form method="post">{% csrf_token %}<label>접속 수단<input name="token" autocomplete="off" required></label><p><button>확인</button></p></form></div>{% endblock %}
