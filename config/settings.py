@@ -2,7 +2,10 @@ import os
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 BASE_DIR = Path(__file__).resolve().parent.parent
-DEV = os.environ.get('APP_MODE', 'production') == 'development'
+APP_MODE = os.environ.get('APP_MODE', 'production')
+DEV = APP_MODE == 'development'
+PRIVATE_STORAGE_CONFIRMED = os.environ.get('PRIVATE_STORAGE_CONFIRMED','')=='true'
+REAL_MATERIALS_ENABLED = os.environ.get('REAL_MATERIALS_ENABLED','')=='true'
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
 if not SECRET_KEY:
     if not DEV: raise ImproperlyConfigured('DJANGO_SECRET_KEY is required')

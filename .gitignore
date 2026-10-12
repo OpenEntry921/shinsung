@@ -5,3 +5,9 @@ __pycache__/
 runtime/
 *.sqlite3
 *.log
+
+# Private source materials must never be committed.
+*.docx
+*.pdf
+*.xlsx
+private-materials/

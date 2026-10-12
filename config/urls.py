@@ -1,7 +1,9 @@
 from django.contrib import admin
 from django.urls import path
 from portal import views as v
+from portal import material_views as m
 urlpatterns=[
+ path('materials/import/',m.memo_import,name='memo_import'),path('materials/candidates/<int:pk>/convert/',m.candidate_convert),
  path('admin/',admin.site.urls), path('admin-mfa/',v.admin_mfa),
  path('login/',v.login,name='login'),path('otp/',v.otp),path('logout/',v.logout),path('policy/',v.policy),path('health/',v.health),
  path('exception/',v.exception_login),path('exception-issue/',v.exception_issue),path('roster/',v.roster),

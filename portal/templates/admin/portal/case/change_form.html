@@ -1,0 +1,1 @@
+{% extends 'admin/change_form.html' %}{% block object-tools-items %}{{ block.super }}{% if original %}<li><a href="{% url 'admin:portal_case_preview' original.pk %}">저장된 세 영역 미리보기·게시 점검</a></li>{% endif %}{% endblock %}

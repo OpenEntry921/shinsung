@@ -5,3 +5,8 @@ runtime
 **/__pycache__
 *.sqlite3
 *.log
+
+**/*.docx
+**/*.pdf
+**/*.xlsx
+private-materials

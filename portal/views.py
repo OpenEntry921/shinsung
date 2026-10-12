@@ -70,27 +70,42 @@ def admin_mfa(request):
     return render(request,'portal/mfa.html',{'error':error})
 
 def cases(request):
-    queryset=Case.objects.filter(state='published').order_by('occurred_on','id')
+    from django.db.models.functions import Coalesce,ExtractYear,ExtractMonth,ExtractDay
+    from django.db.models import Value,IntegerField
+    queryset=Case.objects.filter(state='published')
     q=request.GET.get('q','')[:200]
     if q: queryset=queryset.filter(Q(title__icontains=q)|Q(topic__icontains=q))
-    for field,lookup in [('from','occurred_on__gte'),('to','occurred_on__lte')]:
-        value=request.GET.get(field)
-        if value:
-            try: datetime.date.fromisoformat(value); queryset=queryset.filter(**{lookup:value})
-            except ValueError: pass
-    return render(request,'portal/cases.html',{'cases':queryset,'q':q})
+    topic=request.GET.get('topic','')[:100]
+    if topic: queryset=queryset.filter(topic__icontains=topic)
+    direction=request.GET.get('order','asc')
+    queryset=queryset.annotate(sort_year=Coalesce(ExtractYear('occurred_on'),'occurred_year',Value(9999),output_field=IntegerField()),sort_month=Coalesce(ExtractMonth('occurred_on'),'occurred_month',Value(0),output_field=IntegerField()),sort_day=Coalesce(ExtractDay('occurred_on'),Value(0),output_field=IntegerField()))
+    items=list(queryset)
+    items.sort(key=lambda c:(c.sort_year,c.sort_month,c.sort_day,c.pk),reverse=direction=='desc')
+    items.sort(key=lambda c:c.occurred_on is None and c.occurred_year is None)
+    error=''
+    try:
+        start=datetime.date.fromisoformat(request.GET['from']) if request.GET.get('from') else None
+        end=datetime.date.fromisoformat(request.GET['to']) if request.GET.get('to') else None
+        if start and end and start>end: raise ValueError()
+        if start or end:
+            items=[c for c in items if c.date_bounds()[0] and (not start or c.date_bounds()[1]>=start) and (not end or c.date_bounds()[0]<=end)]
+    except ValueError: items=[];error='기간을 확인하세요.'
+    return render(request,'portal/cases.html',{'cases':items,'q':q,'direction':direction,'error':error})
 def case_detail(request,pk):
+    from .case_services import case_context
     case=get_object_or_404(Case,pk=pk,state='published')
-    return render(request,'portal/case.html',{'case':case,'documents':case.documents.filter(state='published',redaction_checked=True)})
+    return render(request,'portal/case.html',case_context(case))
 def documents(request,pk,kind):
     doc=get_object_or_404(Document,pk=pk)
     if kind=='original':
         if not (request.user.is_authenticated and request.user.has_perm('portal.view_document') and request.session.get('admin_mfa_until',0)>timezone.now().timestamp()): return HttpResponseForbidden()
         file=doc.original
-    elif kind=='reading' and request.member and doc.state=='published' and doc.case.state=='published' and doc.redaction_checked: file=doc.reading
+    elif kind=='reading' and request.member and not doc.internal_memo and doc.state=='published' and doc.redaction_checked and Case.objects.filter(Q(documents=doc)|Q(evidence_links__document=doc),state='published').exists(): file=doc.reading
     else: return HttpResponseForbidden()
     if not file: return HttpResponse(status=404)
-    return FileResponse(file.open('rb'),as_attachment=True,filename=f'document-{doc.pk}.pdf',content_type='application/pdf')
+    extension='docx' if kind=='original' and doc.internal_memo else 'pdf'
+    mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document' if extension=='docx' else 'application/pdf'
+    return FileResponse(file.open('rb'),as_attachment=True,filename=f'document-{doc.pk}.{extension}',content_type=mime)
 
 def posts(request):
     qs=Post.objects.filter(hidden=False,deleted_at=None).order_by('-created_at')
@@ -125,7 +140,8 @@ class RequestForm(ModelForm):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs); self.fields['case'].queryset=Case.objects.filter(state='published'); self.fields['post'].queryset=Post.objects.filter(hidden=False,deleted_at=None)
 def requests_view(request):
-    form=RequestForm(request.POST or None)
+    selected=Case.objects.filter(pk=request.GET.get('case'),state='published').first() if request.GET.get('case','').isdigit() else None
+    form=RequestForm(request.POST or None,initial={'case':selected})
     if request.method=='POST' and form.is_valid():
         if not limit('request:'+str(request.member.pk),20,3600): return HttpResponse(status=429)
         obj=form.save(commit=False); obj.member=request.member; obj.save(); return redirect('requests')

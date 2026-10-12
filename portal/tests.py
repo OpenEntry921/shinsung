@@ -146,6 +146,7 @@ class PortalTests(TestCase):
     def test_documents_private_original_and_reading(self):
         with tempfile.TemporaryDirectory() as directory,override_settings(MEDIA_ROOT=directory):
             doc=Document.objects.create(case=self.case,title='가상 PDF',original=SimpleUploadedFile('original.pdf',b'%PDF-1.4 synthetic'),reading=SimpleUploadedFile('reading.pdf',b'%PDF-1.4 redacted'),source='가상',acquired_on='2026-01-01',excerpt='가상',redaction_checked=True,state='published')
+            self.case.state='published';self.case.save()
             self.assertEqual(Path(doc.original.path).stat().st_mode & 0o777,0o600)
             self.assertEqual(self.client.get(f'/documents/{doc.pk}/reading/').status_code,403)
             self.member_login();self.assertEqual(self.client.get(f'/documents/{doc.pk}/reading/').status_code,200)
@@ -165,7 +166,7 @@ class PortalTests(TestCase):
     def test_security_headers(self):
         response=self.client.get('/login/');self.assertEqual(response['Cache-Control'],'no-store, private');self.assertIn("script-src 'self'",response['Content-Security-Policy'])
     def case_payload(self,state):
-        return {'title':self.case.title,'occurred_on':'2026-01-01','topic':self.case.topic,'state':state,'timeline':'','facts':'','claims':'','unknown':'','status':'','decisions':'','responses':'','issues':'','opinion':'','review_summary':self.case.review_summary}
+        return {'title':self.case.title,'occurred_on':'2026-01-01','topic':self.case.topic,'state':state,'timeline':'','facts':'','claims':'','unknown':'','status':'','decisions':'','responses':'','issues':'','opinion':'','review_summary':self.case.review_summary,'occurred_precision':'day','sources_reviewed':'on','privacy_reviewed':'on','publication_reason':'가상 자료 검토 확인'}
     def test_admin_author_cannot_self_approve(self):
         self.staff.user_permissions.add(*Permission.objects.filter(codename__in=['change_case','publish_case']))
         self.staff_login();self.case.state='review';self.case.save()
