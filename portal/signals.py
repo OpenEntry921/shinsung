@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save, pre_save, m2m_changed, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
-from .models import Article,Document,Case,CaseEvidence,CaseStatement,Decision,ArticleCaseLink
+from .models import Article,Document,Case,CaseEvidence,CaseStatement,Decision,ArticleCaseLink,RegisteredMaterialCase
 
 def affected(obj):
     ids=set()
@@ -10,6 +10,7 @@ def affected(obj):
         if isinstance(obj,Article): ids.update(obj.related_cases.values_list('pk',flat=True))
         if isinstance(obj,Document):
             ids.update(obj.case_links.values_list('case_id',flat=True))
+            ids.update(RegisteredMaterialCase.objects.filter(batch__document=obj).values_list('case_id',flat=True))
             ids.update(CaseEvidence.objects.filter(document=obj).values_list('case_id',flat=True))
             ids.update(obj.decision_set.values_list('cases__pk',flat=True))
         if isinstance(obj,Decision): ids.update(obj.cases.values_list('pk',flat=True))

@@ -3,7 +3,7 @@ import json
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import connection
-from portal.models import Case, Document, Article, Decision, MemoImport, ImportCandidate
+from portal.models import Case, Document, Article, Decision, MemoImport, ImportCandidate, ReviewedMaterialImport, RegisteredMaterialCase
 
 class Command(BaseCommand):
     help='Read-only case data and publication diagnosis without titles, names or document contents.'
@@ -14,7 +14,7 @@ class Command(BaseCommand):
                 'private_storage_confirmed':settings.PRIVATE_STORAGE_CONFIRMED,
                 'real_materials_enabled':settings.REAL_MATERIALS_ENABLED,
                 'storage_persistence_verified':False,'counts':{},'missing_tables':[]}
-        for label,model in [('cases',Case),('documents',Document),('articles',Article),('decisions',Decision),('imports',MemoImport),('candidates',ImportCandidate)]:
+        for label,model in [('cases',Case),('documents',Document),('articles',Article),('decisions',Decision),('imports',MemoImport),('candidates',ImportCandidate),('reviewed_imports',ReviewedMaterialImport),('registered_cases',RegisteredMaterialCase)]:
             if model._meta.db_table not in tables:
                 report['counts'][label]=None;report['missing_tables'].append(label)
                 continue

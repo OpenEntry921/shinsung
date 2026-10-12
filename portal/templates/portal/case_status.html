@@ -1,0 +1,15 @@
+<section class="panel" aria-labelledby="status-panel-{{ case.pk }}"><div class="eyebrow">03 · 현재 상황과 판단 참고</div><h2 id="status-panel-{{ case.pk }}">현재 상황과 검토 쟁점</h2>
+<h3>현재 처리 상태</h3><p>{{ case.status|default:'최근 상태 확인 필요' }}</p><p class="eyebrow">상태 확인 기준일 {{ case.status_as_of|default:'확인 중' }}</p>
+<h3>공식 결정 · 이전·이후 결정</h3>
+{% for decision in decisions %}<article class="card"><strong>{% if decision.source_confirmed %}원문 확인한 공식 결정{% else %}결정 원자료 확인 중 · 공식 판단으로 확정하지 않음{% endif %}</strong><p>기관: {{ decision.institution|default:'확인 중' }}
+사건번호: {{ decision.case_number|default:'확인 중' }}
+결정일: {{ decision.decided_on|default:'확인 중' }} · 송달일: {{ decision.served_on|default:'확인 중' }}</p>
+{% if decision.source_confirmed %}<p>결과 유형: {{ decision.get_outcome_display }}
+주문: {{ decision.order|default:'확인 중' }}
+판단 범위: {{ decision.scope|default:'확인 중' }}
+상소 여부: {{ decision.appeal_status|default:'최근 상태 확인 필요' }}
+확정 여부: {{ decision.get_finality_display }}</p>{% else %}<p>주문·판단 범위·개별 결과·상소·확정 여부는 원자료 및 최근 상태 확인이 필요합니다.</p>{% endif %}<p>근거 문서: {% if decision.visible_document %}{{ decision.document.title|default:'확인 중' }} · {{ decision.locator|default:'위치 확인 중' }}{% else %}교인 열람본 확인 중{% endif %}</p></article>{% empty %}<p>원자료로 검증한 결정 없음 · 무죄·불기소·기각·판단 제외·확정 여부를 구분해야 합니다.</p>{% endfor %}
+{% if case.decisions %}<h3>기존 결정 기재 · 원자료 확인 필요</h3><p>{{ case.decisions }}</p>{% endif %}
+<h3>양측 설명과 반론</h3><p>{{ case.responses|default:'자료 확인 중 · 답변 미접수는 잘못의 인정이 아닙니다.' }}</p><h3>조문과 비교할 검토 쟁점</h3><p>{{ case.issues|default:'자료 확인 중' }}</p><h3>추가로 필요한 자료</h3><p>{{ case.additional_materials|default:'자료 확인 중' }}</p><h3>검토 문서·운영진 의견과 근거</h3>{% for statement in opinion_statements %}<article class="card"><strong class="tag">{{ statement.display_kind }} · {{ statement.get_presentation_display }}</strong><p>{{ statement.text }}</p><p>근거: {{ statement.source_note }}{% if statement.visible_evidence %} · {{ statement.evidence.document.title }} · {{ statement.evidence.locator }}{% endif %}</p></article>{% endfor %}{% if case.opinion %}<p>운영진 별도 의견: {{ case.opinion }}</p>{% elif not opinion_statements %}<p>등록된 검토 의견 없음</p>{% endif %}<p class="notice">운영진 의견은 공식 판단이 아닙니다. 일부 항목의 판단을 사건 전체나 모든 행동의 결론으로 확대하지 않습니다. 사건별 재판·재항고 결론을 합치지 않습니다.</p>
+{% if not preview %}<a href="/requests/?case={{ case.pk }}">이 사건의 비공개 반론·자료 제출·정정 요청</a>{% endif %}
+{% if case.changes.all %}<h3>공개 정정·변경 이력</h3>{% for change in case.changes.all %}<p>{{ change.published_at }} · {{ change.summary }}</p>{% endfor %}{% endif %}</section>

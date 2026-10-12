@@ -72,9 +72,34 @@ def admin_mfa(request):
 def cases(request):
     from django.db.models.functions import Coalesce,ExtractYear,ExtractMonth,ExtractDay
     from django.db.models import Value,IntegerField
-    queryset=Case.objects.filter(state='published')
+    queryset=Case.objects.filter(state='published').select_related('source_registration__batch__document')
     q=request.GET.get('q','')[:200]
-    if q: queryset=queryset.filter(Q(title__icontains=q)|Q(topic__icontains=q))
+    if q:
+        import re
+        date_parts=re.fullmatch(r'(\d{4})[.\-/](\d{1,2})(?:[.\-/](\d{1,2}))?',q)
+        def date_matches(case):
+            if q in case.date_label: return True
+            if date_parts:
+                year,month,day=date_parts.groups()
+                if case.occurred_on:
+                    if day is not None:
+                        try: target=datetime.date(int(year),int(month),int(day))
+                        except ValueError: return False
+                        start,end=case.date_bounds()
+                        return start<=target<=end
+                    return case.occurred_on.year==int(year) and case.occurred_on.month==int(month)
+                if day is None and case.occurred_precision=='period':
+                    import calendar
+                    try:
+                        lower=datetime.date(int(year),int(month),1)
+                        upper=datetime.date(int(year),int(month),calendar.monthrange(int(year),int(month))[1])
+                    except ValueError: return False
+                    start,end=case.date_bounds()
+                    return bool(start and start<=upper and end>=lower)
+                return day is None and case.occurred_year==int(year) and case.occurred_month==int(month)
+            return False
+        matched_dates={case.pk for case in queryset if date_matches(case)}
+        queryset=queryset.filter(Q(pk__in=matched_dates)|Q(title__icontains=q)|Q(topic__icontains=q)|Q(facts__icontains=q)|Q(unknown__icontains=q)|Q(decisions__icontains=q)|Q(responses__icontains=q)|Q(status__icontains=q)|Q(overview__icontains=q)|Q(timeline__icontains=q)|Q(claims__icontains=q)|Q(issues__icontains=q)|Q(opinion__icontains=q)|Q(additional_materials__icontains=q)|Q(statements__text__icontains=q)|Q(articles__citation__icontains=q)|Q(articles__review_description__icontains=q)|Q(linked_articles__citation__icontains=q)|Q(linked_articles__review_description__icontains=q)|Q(period_description__icontains=q)|Q(source_registration__key__icontains=q)).distinct()
     topic=request.GET.get('topic','')[:100]
     if topic: queryset=queryset.filter(topic__icontains=topic)
     direction='desc' if request.GET.get('order')=='desc' else 'asc'
@@ -90,12 +115,17 @@ def cases(request):
         if start or end:
             items=[c for c in items if c.date_bounds()[0] and (not start or c.date_bounds()[1]>=start) and (not end or c.date_bounds()[0]<=end)]
     except ValueError: items=[];error='기간을 확인하세요.'
-    from django.core.paginator import Paginator
     from .case_services import case_context
-    page=Paginator(items,5).get_page(request.GET.get('page'))
-    query=request.GET.copy();query.pop('page',None)
-    encoded=query.urlencode()
-    return render(request,'portal/cases.html',{'cases':page.object_list,'case_groups':[case_context(case) for case in page], 'page_obj':page,'page_query':encoded+'&' if encoded else '', 'result_count':len(items),'filtered':bool(q or topic or request.GET.get('from') or request.GET.get('to')),'q':q,'direction':direction,'error':error})
+    groups=[case_context(case) for case in items]
+    rules={}
+    for group in groups:
+        for article in group['articles']:
+            if article.pk not in rules:
+                rules[article.pk]=article
+                article.listed_cases=[]
+            rules[article.pk].listed_cases.append({'case':group['case'],'applicability':article.case_applicability,'reason':article.case_applicability_reason,'relevance':article.case_relevance})
+    return render(request,'portal/cases.html',{'cases':items,'case_groups':groups,'listed_articles':list(rules.values()),'result_count':len(items),'filtered':bool(q or topic or request.GET.get('from') or request.GET.get('to')),'q':q,'direction':direction,'error':error})
+
 def case_detail(request,pk):
     from .case_services import case_context
     case=get_object_or_404(Case,pk=pk,state='published')
