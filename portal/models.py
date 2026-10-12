@@ -96,10 +96,21 @@ class Case(models.Model):
         if self.occurred_precision=='period': return self.period_description or f'{self.occurred_on or "확인 중"} ~ {self.occurred_until or "확인 중"}'
         return '발생일 확인 중'
     def date_bounds(self):
-        import calendar,datetime
+        import calendar,datetime,re
         if self.occurred_precision in ('day','period') and self.occurred_on:
             start=Case._meta.get_field('occurred_on').to_python(self.occurred_on)
             return start,Case._meta.get_field('occurred_until').to_python(self.occurred_until) or start
+        if self.occurred_precision=='period':
+            months=re.fullmatch(r'(\d{4})\.(\d{1,2})~(\d{1,2})',self.period_description.strip())
+            years=re.fullmatch(r'(\d{4})~(\d{4})(?:초|말)?',self.period_description.strip())
+            try:
+                if months:
+                    year,start,end=map(int,months.groups())
+                    if 1<=start<=end<=12: return datetime.date(year,start,1),datetime.date(year,end,calendar.monthrange(year,end)[1])
+                if years:
+                    start,end=map(int,years.groups())
+                    if start<=end: return datetime.date(start,1,1),datetime.date(end,12,31)
+            except ValueError: pass
         if self.occurred_year:
             if self.occurred_month:
                 return datetime.date(self.occurred_year,self.occurred_month,1),datetime.date(self.occurred_year,self.occurred_month,calendar.monthrange(self.occurred_year,self.occurred_month)[1])
@@ -129,6 +140,8 @@ class Article(models.Model):
     applicability_status = models.CharField('사건 당시 적용 상태',max_length=12,choices=[('pending','확인 중'),('applicable','적용 확인'),('inapplicable','적용 아님')],default='pending')
     applicability_reason = models.TextField('사건 당시 적용 검증 근거',blank=True)
     related_cases = models.ManyToManyField(Case,blank=True,related_name='linked_articles',through='ArticleCaseLink',verbose_name='추가 관련 사건')
+    review_description = models.TextField('검토 문서의 조항 설명 (공식 원문 아님)',blank=True)
+    review_source = models.CharField('조항 설명 출처',max_length=300,blank=True)
     text = models.TextField('정확한 조문',blank=True)
     source = models.URLField('총회 공식 원문 URL',blank=True)
     amendment_source = models.URLField('총회 공식 개정 공고 URL',blank=True)
@@ -270,6 +283,7 @@ class Decision(models.Model):
 class CaseStatement(models.Model):
     case = models.ForeignKey(Case,on_delete=models.CASCADE,related_name='statements')
     kind = models.CharField('설명 분류',max_length=20,choices=[('fact','원자료로 확인된 사실'),('decision_fact','해당 결정에서 인정한 사실'),('claim','당사자 주장·반론'),('unknown','미확인 사항'),('opinion','운영진 검토 의견')],default='unknown')
+    presentation = models.CharField('표현 형식',max_length=24,default='summary',choices=[('summary','편집자 요약'),('quotation','원문 발췌'),('redacted_quotation','원문 발췌 · 역할명 치환')])
     text = models.TextField('중립적인 설명')
     source_note = models.CharField('출처 설명',max_length=300)
     evidence = models.ForeignKey(CaseEvidence,on_delete=models.PROTECT,null=True,blank=True)
@@ -332,3 +346,22 @@ class ArticleCaseLink(models.Model):
         if self.applicability_status=='applicable':
             start,_=self.case.date_bounds()
             if not self.article.verified or not start or not self.article.effective_on or self.article.effective_on>start or not self.applicability_reason: raise ValidationError('공유 조문도 이 사건의 시점과 적용 근거를 별도로 검증하세요.')
+
+class ReviewedMaterialImport(models.Model):
+    key = models.SlugField(max_length=100,unique=True)
+    source_digest = models.CharField(max_length=64,unique=True)
+    plan_digest = models.CharField(max_length=64)
+    document = models.ForeignKey(Document,on_delete=models.PROTECT)
+    basis_on = models.DateField()
+    author = models.ForeignKey('auth.User',on_delete=models.PROTECT,related_name='+')
+    reviewer = models.ForeignKey('auth.User',on_delete=models.PROTECT,related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class RegisteredMaterialCase(models.Model):
+    batch = models.ForeignKey(ReviewedMaterialImport,on_delete=models.PROTECT,related_name='records')
+    key = models.SlugField(max_length=100)
+    case = models.OneToOneField(Case,on_delete=models.PROTECT,related_name='source_registration')
+    source_locator = models.CharField(max_length=300)
+    verification = models.CharField(max_length=20,default='memo_only',choices=[('memo_only','검토 문서 기재 · 원자료 미대조'),('matched','원자료 대조 완료')])
+    class Meta:
+        constraints=[models.UniqueConstraint(fields=['batch','key'],name='unique_reviewed_material_case')]

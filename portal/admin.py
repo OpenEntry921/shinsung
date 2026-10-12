@@ -255,3 +255,11 @@ class ImportCandidateAdmin(TrackedAdmin):
 @admin.register(ArticleCaseLink)
 class ArticleCaseLinkAdmin(TrackedAdmin):
     list_display=['case','article','applicability_status']
+
+@admin.register(ReviewedMaterialImport)
+class ReviewedImportAdmin(ReadOnlyAdmin):
+    list_display=['key','basis_on','created_at']
+
+@admin.register(RegisteredMaterialCase)
+class RegisteredCaseAdmin(ReadOnlyAdmin):
+    list_display=['key','case','verification']

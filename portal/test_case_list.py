@@ -17,9 +17,9 @@ class ContinuousCaseTests(TestCase):
         first=self.case('가상 첫 사건',1,overview='첫 사건 개요',issues='첫 검토 쟁점',opinion='첫 운영 의견')
         second=self.case('가상 두 번째',2,overview='둘째 개요',issues='둘째 검토 쟁점')
         response=self.client.get('/');content=response.content.decode()
-        self.assertContains(response,'검색 결과 2건');self.assertContains(response,'class="case-group"',count=2)
-        self.assertContains(response,'class="columns"',count=2)
-        self.assertLess(content.index('첫 운영 의견'),content.index('가상 두 번째'))
+        self.assertContains(response,'검색 결과 2건');self.assertContains(response,'class="review-section"',count=3)
+        self.assertNotContains(response,'class="columns"')
+        self.assertLess(content.index('① 사건 경과'),content.index('② 관련 교단 헌법과 규정'));self.assertLess(content.index('② 관련 교단 헌법과 규정'),content.index('③ 쟁점과 추가 확인사항'))
         for case in (first,second):
             self.assertContains(response,f'/cases/{case.pk}/')
             self.assertContains(self.client.get(f'/cases/{case.pk}/'),case.overview)
@@ -31,14 +31,12 @@ class ContinuousCaseTests(TestCase):
         self.assertContains(response,'끝표시 &lt;script&gt;alert(1)&lt;/script&gt;')
         self.assertContains(response,'가상 조문 후보 1');self.assertContains(response,'가상 조문 후보 2')
         self.assertNotContains(response,'검증 안 된 본문')
-    def test_pagination_preserves_search_and_sort_and_whole_groups(self):
+    def test_initial_content_has_all_cases_and_keeps_sort_filters(self):
         for day in range(1,8):self.case(f'가상 사건 {day}',day)
         response=self.client.get('/?q=가상&topic=주제&order=desc&from=2025-01-01')
-        self.assertContains(response,'검색 결과 7건');self.assertContains(response,'class="case-group"',count=5)
-        self.assertContains(response,'order=desc&amp;from=2025-01-01&amp;page=2')
-        self.assertEqual([c.title for c in response.context['cases']], [f'가상 사건 {n}' for n in (7,6,5,4,3)])
-        response=self.client.get('/?q=가상&topic=주제&order=desc&from=2025-01-01&page=2')
-        self.assertEqual([c.title for c in response.context['cases']],['가상 사건 2','가상 사건 1'])
+        self.assertContains(response,'검색 결과 7건')
+        self.assertEqual([c.title for c in response.context['cases']], [f'가상 사건 {n}' for n in range(7,0,-1)])
+        self.assertNotContains(response,'다음 페이지')
     def test_empty_search_and_reset(self):
         self.assertContains(self.client.get('/'),'게시된 사건이 아직 없습니다')
         self.case();response=self.client.get('/?q=없는검색')
@@ -79,3 +77,23 @@ class ContinuousCaseTests(TestCase):
         session=self.client.session;session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session.save()
         Member.objects.filter(pk=self.member.pk).update(active=False)
         self.assertEqual(self.client.get('/').status_code,302)
+
+    def test_body_date_and_shared_rule_search_connections(self):
+        from .models import ArticleCaseLink
+        first=self.case('가상 첫 연결 사건',2,overview='본문만의 검색어')
+        second=self.case('가상 둘째 연결 사건',3)
+        article=Article.objects.create(case=first,citation='가상 제998조 후보',review_description='공식 원문이 아닌 가상 설명',relevance='가상 관련성')
+        ArticleCaseLink.objects.create(article=article,case=second,relevance='두 번째 가상 연결')
+        Case.objects.filter(pk__in=[first.pk,second.pk]).update(state='published')
+        self.assertEqual([c.pk for c in self.client.get('/?q=2025.1.2').context['cases']],[first.pk])
+        self.assertEqual(self.client.get('/?q=2025.99.99').status_code,200)
+        self.assertEqual([c.pk for c in self.client.get('/?q=본문만의').context['cases']],[first.pk])
+        response=self.client.get('/?q=998');self.assertEqual([c.pk for c in response.context['cases']],[first.pk,second.pk])
+        self.assertContains(response,'가상 제998조 후보',count=1)
+        self.assertContains(response,'공식 원문이 아닌 가상 설명')
+
+    def test_month_range_search_keeps_original_period_and_no_fake_day(self):
+        case=Case.objects.create(title='가상 월 구간',topic='가상',author=self.editor,state='published',occurred_precision='period',occurred_year=2001,occurred_month=4,period_description='2001.4~6')
+        for url in ('/?q=2001.6','/?from=2001-06-15&to=2001-06-20'):
+            self.assertContains(self.client.get(url),'2001.4~6')
+        case.refresh_from_db();self.assertIsNone(case.occurred_on);self.assertIsNone(case.occurred_until)

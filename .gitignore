@@ -11,3 +11,5 @@ runtime/
 *.pdf
 *.xlsx
 private-materials/
+
+**/*.review.json

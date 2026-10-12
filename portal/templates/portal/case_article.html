@@ -1,0 +1,10 @@
+<section class="panel" aria-labelledby="article-panel-{{ case.pk|default:'list' }}"><div class="eyebrow">02 · 관련 통합 헌법</div><h2 id="article-panel-{{ case.pk|default:'list' }}">관련 대한예수교장로회 통합 헌법</h2>
+{% for article in articles %}<article class="card"><p class="eyebrow">{{ article.get_document_kind_display }}</p><h3>{{ article.citation }}{% if article.heading %} · {{ article.heading }}{% endif %}</h3>
+{% if article.review_description %}<h3>검토 문서의 조항 설명 · 공식 원문 아님</h3><p>{{ article.review_description }}</p><p class="eyebrow">출처: {{ article.review_source }}</p>{% endif %}
+<p>조문 자체 확인: {% if article.source_confirmed %}공식 원문·개정 공고 확인{% else %}공식 조문 원문 미확인 · 조문 확인 중{% endif %}
+사건 당시 적용: {{ article.case_applicability }}</p>
+{% if article.source_confirmed %}<p>{{ article.text }}</p><a href="{{ article.source }}" rel="noreferrer noopener">총회 공식 원문</a> · <a href="{{ article.amendment_source }}" rel="noreferrer noopener">개정 공고</a><p>공식 페이지 {{ article.official_page|default:'확인 중' }}
+개정 {{ article.amended_on|default:'확인 중' }} · 시행 {{ article.effective_on|default:'확인 중' }} · 확인 {{ article.checked_on|default:'확인 중' }}</p>{% else %}<p class="notice">공식 원문과 개정 정보를 확인 중입니다. 메모의 조문 번호는 확인 후보이며 본문을 임의로 채우지 않습니다.</p>{% endif %}
+{% if article.listed_cases %}<h3>연결된 사건과 검토 상태</h3>{% for link in article.listed_cases %}<p><a href="#event-case-{{ link.case.pk }}">{% if link.case.source_registration %}{{ link.case.source_registration.key }} · {% endif %}{{ link.case.title }}</a> · 사건 당시 적용 {{ link.applicability }}<br>{{ link.relevance }}<br>적용 근거: {{ link.reason|default:'확인 중' }}</p>{% endfor %}{% endif %}
+<p>사건 당시 적용 검증 근거: {{ article.case_applicability_reason|default:'확인 중 · 현재 조문을 소급 적용하지 않음' }}</p><h3>현재 조문과 차이</h3><p>{{ article.case_current_difference|default:'차이 확인 중' }}</p><h3>연결되는 이유</h3><p>{{ article.case_relevance|default:'검토 중' }}</p></article>{% empty %}<p>조문 확인 중 · 통합 헌법과 헌법시행규정을 구분하여 공식 원문·개정일·사건 당시 적용 여부를 검증해야 합니다.</p>{% endfor %}
+</section>

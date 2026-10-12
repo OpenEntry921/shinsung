@@ -20,6 +20,9 @@ def case_context(case,preview=False):
         item.visible_evidence=item.evidence if item.evidence and (preview or item.evidence.document_id in public_ids) else None
         item.visible_supporting_evidence=[link for link in item.supporting_evidence.all() if preview or link.document_id in public_ids]
         item.display_kind=item.get_kind_display()
+        if getattr(case,'source_registration',None):
+            if item.kind=='unknown': item.display_kind='검토 문서 기재 · 원자료 미대조'
+            elif item.kind=='opinion': item.display_kind='검토 문서의 추가 확인사항' if item.text.startswith('추가 확인사항:') else '검토 문서의 의견 · 공식 판단 아님'
         item.decision_fact_confirmed=False
         if item.kind in ('fact','decision_fact'):
             evidence=item.evidence
@@ -42,6 +45,16 @@ def case_context(case,preview=False):
 
 def publication_errors(case):
     errors=[]
+    registration=getattr(case,'source_registration',None)
+    if registration:
+        import hashlib
+        try:
+            digest=hashlib.sha256()
+            with registration.batch.document.original.open('rb') as original:
+                for chunk in original.chunks(): digest.update(chunk)
+            if digest.hexdigest()!=registration.batch.source_digest:
+                errors.append('최초 검토한 원문과 현재 원본이 다릅니다. 발췌·출처를 재대조하세요.')
+        except (OSError,ValueError): errors.append('최초 검토 원본이 비공개 저장소에 보존되어 있는지 확인하세요.')
     if not case.sources_reviewed: errors.append('출처와 근거 없는 확정 표현을 검토하세요.')
     if not case.privacy_reviewed: errors.append('본문·열람본의 개인정보 가림을 확인하세요.')
     if not case.publication_reason.strip(): errors.append('검토·승인 사유를 기록하세요.')

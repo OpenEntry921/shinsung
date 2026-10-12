@@ -2,7 +2,7 @@ from django.conf import settings
 from django.shortcuts import redirect
 from django.http import HttpResponseForbidden
 from django.utils import timezone
-from .models import Member
+from .models import Member, ReviewedMaterialImport
 
 class AccessMiddleware:
     def __init__(self,get_response): self.get_response=get_response
@@ -17,6 +17,12 @@ class AccessMiddleware:
         path=request.path
         public=path in ('/login/','/otp/','/exception/','/policy/','/health/') or path.startswith('/static/')
         admin_public=path in ('/admin/login/','/admin/logout/','/admin-mfa/')
+        # Public demo OTPs must never unlock an accidentally reused real-material database.
+        admin_path=path.startswith(('/admin','/roster/','/exception-issue/','/materials/'))
+        if request.member and settings.DEV and not public and not admin_path and ReviewedMaterialImport.objects.exists():
+            response=HttpResponseForbidden('시연 저장소와 실제 자료 저장소를 분리하고 운영 모드에서 열람하세요.')
+            response['Cache-Control']='no-store, private'
+            return response
         if path.startswith('/admin') or path.startswith('/roster/') or path.startswith('/exception-issue/') or path.startswith('/materials/'):
             if not admin_public:
                 if not request.user.is_authenticated or not request.user.is_staff: return redirect('/admin/login/')
