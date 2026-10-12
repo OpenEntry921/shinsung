@@ -1,6 +1,6 @@
 # 교회를 살리는 신도들의 모임 — 교인 전용 독립 앱
 
-COMMON과 연결하지 않는 Django 서버 앱입니다. 교회의 공식 홈페이지·교단의 판단 기관이 아닙니다. 실제 명부·사건·조문 데이터는 포함하지 않습니다. 개발 변경은 별도 브랜치와 PR에서 검토합니다.
+교인 전용 독립 Django 서버 앱입니다. 교회의 공식 홈페이지·교단의 판단 기관이 아닙니다. 실제 명부·사건·조문 데이터는 포함하지 않습니다. 개발 변경은 별도 브랜치와 PR에서 검토합니다.
 
 ## 개발 환경
 
@@ -8,13 +8,15 @@ Python 3.12, Django 5.2, SQLite 영구 DB, 비공개 파일 저장을 사용합�
 
 ```sh
 sh scripts/install.sh
-APP_MODE=development .venv/bin/python manage.py seed_demo
-APP_MODE=development .venv/bin/python manage.py runserver 127.0.0.1:8000
 APP_MODE=development .venv/bin/python manage.py test
+. .venv/bin/activate
+APP_MODE=development sh scripts/start-production.sh
 ```
 
-개발 모드에서 `가상교인` / `01000000000`만 명시적으로 생성합니다. 인증번호는 가상 교인에만 화면에 나타나며 실제 교인의 인증을 처리하지 않습니다. 사건·판결·조문은 시연용으로 채우지 않습니다. 실제 명부를 개발 DB에 업로드하지 마세요. 새로운 작업도 기존 체크아웃을 사용하며 별도의 Git worktree를 만들 필요가 없습니다.
+시연 환경은 `APP_MODE=development`, 운영 환경은 `APP_MODE=production`입니다. Cloudtype에서는 `APP_MODE=development`를 유지하고 이 변경이 포함된 코드로 재배포하면 됩니다. 배포 시작 시 마이그레이션 후 `가상교인` / `01000000000` (`synthetic=True`)이 자동 생성됩니다. 반복 시작해도 기존 가상 계정 ID와 게시글 연결을 보존하며 중복 생성하지 않습니다. 실제 명부가 있는 DB에서는 샘플 생성을 거부하고 서버 시작을 중단합니다. 인증번호는 가상 교인에만 화면에 나타나며 실제 교인의 인증을 처리하지 않습니다. 사건·판결·조문은 시연용으로 채우지 않습니다. 실제 명부를 개발 DB에 업로드하지 마세요. 새로운 작업도 기존 체크아웃을 사용하며 별도의 Git worktree를 만들 필요가 없습니다.
 
 관리자 계정은 `createsuperuser`로 별도 생성합니다. 관리자도 개인별 TOTP 추가 인증이 필수입니다. 공개 운영 전 설정·정책·자료 검증이 필요하며 현재 배포된 서비스가 아닙니다.
 
 [운영·배포·자료 관리 안내](docs/OPERATIONS.md) · [구현 및 검증 범위](docs/STATUS.md)
+
+자동 생성은 기존 데이터의 백업이나 복구 기능이 아닙니다. 임시 디스크에서 데이터가 사라지면 가상 계정은 다시 생성되지만 이전 게시글·자료는 복구되지 않습니다. 운영 전 영구 저장소와 실제 SMS 연결이 별도로 필요합니다. `APP_MODE`가 없거나 값이 잘못되면 개발 모드로 전환하지 않고 가상 계정을 자동 생성하지 않습니다.
