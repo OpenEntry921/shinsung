@@ -34,7 +34,7 @@ def login(request):
         if allowed:
             Challenge.objects.create(id=request.session['challenge_id'],member=member if sent else None,digest=digest(request.session['challenge_id'],code),expires_at=timezone.now()+datetime.timedelta(minutes=5),version=member.session_version if sent else 1)
         if sent and settings.DEV and member.synthetic: devcode=code
-    return render(request,'portal/login.html',{'message':message,'devcode':devcode})
+    return render(request,'portal/login.html',{'message':message,'devcode':devcode,'development':settings.DEV})
 
 @require_POST
 def otp(request):
@@ -53,7 +53,7 @@ def otp(request):
                 request.session.set_expiry(3600)
                 return redirect('/')
             challenge.save()
-    return render(request,'portal/login.html',{'message':error},status=400)
+    return render(request,'portal/login.html',{'message':error,'development':settings.DEV},status=400)
 
 @require_POST
 def logout(request):
