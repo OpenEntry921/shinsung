@@ -12,9 +12,13 @@ def case_context(case,preview=False):
     links=case.evidence_links.select_related('document')
     documents=Document.objects.filter(Q(case=case)|Q(case_links__case=case),internal_memo=False).distinct()
     if not preview: documents=documents.filter(state='published',redaction_checked=True).exclude(reading='')
+    public_ids=set(documents.values_list('pk',flat=True))
+    if not preview: links=links.filter(document_id__in=public_ids)
     statements=case.statements.select_related('evidence__document','decision').prefetch_related('supporting_evidence__document')
     # Render unverified or invalidated statements as unknown even before an admin corrects metadata.
     for item in statements:
+        item.visible_evidence=item.evidence if item.evidence and (preview or item.evidence.document_id in public_ids) else None
+        item.visible_supporting_evidence=[link for link in item.supporting_evidence.all() if preview or link.document_id in public_ids]
         item.display_kind=item.get_kind_display()
         item.decision_fact_confirmed=False
         if item.kind in ('fact','decision_fact'):
@@ -24,6 +28,8 @@ def case_context(case,preview=False):
             elif item.kind=='decision_fact': item.decision_fact_confirmed=True
     from django.db.models import F
     decisions=case.official_decisions.select_related('document').order_by(F('decided_on').asc(nulls_last=True),'pk')
+    for decision in decisions:
+        decision.visible_document=preview or decision.document_id in public_ids
     warnings=[]
     if preview:
         import re

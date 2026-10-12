@@ -1,0 +1,53 @@
+{% if embedded %}<h2 id="case-title-{{ case.pk }}">{{ case.title }}</h2><a href="{% url 'case' case.pk %}">이 사건 직접 링크</a>{% else %}<h1>{{ case.title }}</h1>{% endif %}
+<p class="eyebrow">발생 {{ case.date_label }} · 현재 상태: {{ case.status|default:'확인 중' }}
+상태 확인 기준일 {{ case.status_as_of|default:'확인 중' }} · 자료 기준일 {{ case.materials_as_of|default:'확인 중' }}
+등록 {{ case.created_at }} · 최종 수정 {{ case.updated_at }}</p>
+<div class="columns">
+<section class="panel" aria-labelledby="event-panel-{{ case.pk }}">
+<div class="eyebrow">01 · 사건과 근거 자료</div><h2 id="event-panel-{{ case.pk }}">사건과 근거 자료</h2>
+<h3>사건 개요</h3><p>{{ case.overview|default:'자료 확인 중' }}</p>
+<h3>경과와 설명</h3>
+{% for statement in event_statements %}
+<article class="card"><strong class="tag">{{ statement.display_kind }}</strong><p class="eyebrow">{% if statement.occurred_on %}{{ statement.occurred_on }}{% else %}{{ statement.date_description|default:'경과일 확인 중' }}{% endif %}</p><p>{{ statement.text }}</p><p class="eyebrow">출처: {{ statement.source_note }}</p>
+{% if statement.visible_evidence %}<p>근거: {{ statement.evidence.document.title }} · {{ statement.evidence.locator }}{% if statement.evidence.document.state == 'published' and statement.evidence.document.redaction_checked and not statement.evidence.document.internal_memo %} · <a href="/documents/{{ statement.evidence.document.pk }}/reading/">열람본</a>{% else %} · 열람본 확인 중{% endif %}</p>{% endif %}
+{% for evidence in statement.visible_supporting_evidence %}{% if not evidence.document.internal_memo %}<p>추가 근거: {{ evidence.document.title }} · {{ evidence.locator }}</p>{% endif %}{% endfor %}
+{% if statement.decision_fact_confirmed %}<p>해당 결정에서 인정한 사실 · 판단 범위: {{ statement.decision.scope|default:'확인 중' }} · 확정 여부: {{ statement.decision.get_finality_display }}</p>{% endif %}
+</article>{% empty %}<p>분류·출처가 연결된 설명을 확인 중입니다.</p>{% endfor %}
+{% if case.timeline %}<h3>기존 경과 기재 · 출처 재확인 필요</h3><p>{{ case.timeline }}</p>{% endif %}
+{% if case.facts %}<h3>기존 사실 기재 · 원자료 재확인 필요</h3><p>{{ case.facts }}</p>{% endif %}
+{% if case.claims %}<h3>당사자 주장 · 반론</h3><p>{{ case.claims }}</p>{% endif %}
+{% if case.unknown %}<h3>미확인 사항</h3><p>{{ case.unknown }}</p>{% endif %}
+<h3>근거 문서와 해당 부분</h3>
+{% for evidence in evidence_links %}{% if not evidence.document.internal_memo %}<p>{{ evidence.document.title }} · {{ evidence.locator }} · {% if evidence.checked and evidence.document.original_checked %}해당 부분 직접 확인{% else %}원자료 확인 필요{% endif %}</p>{% endif %}{% empty %}<p>근거 위치 확인 중</p>{% endfor %}
+{% for doc in documents %}<article class="card"><strong>{{ doc.title }}</strong><p>자료 상태: {{ doc.get_state_display }} · {% if doc.original_checked %}원자료 직접 확인{% else %}원자료 확인 필요{% endif %}
+출처: {{ doc.source|default:'확인 중' }}
+확보일: {{ doc.acquired_on }} · 작성일: {{ doc.written_on|default:'확인 중' }}
+송달일: {{ doc.served_on|default:'확인 중' }} · 결정일: {{ doc.decided_on|default:'확인 중' }}
+원문·발췌 범위: {{ doc.excerpt }}
+가림 이유: {{ doc.redaction_reason|default:'불필요한 개인정보 없음 여부 확인 필요' }}</p>{% if doc.state == 'published' and doc.redaction_checked and doc.reading %}<a href="/documents/{{ doc.pk }}/reading/">가림 확인된 비공개 열람본 다운로드</a>{% else %}<p>열람본 검토 중 · 다운로드 제공하지 않음</p>{% endif %}</article>{% empty %}<p>안전한 교인 열람본 확인 중</p>{% endfor %}
+{% if related_cases %}<h3>관련 사건 (별도 사건의 결론과 혼동하지 않음)</h3>{% for related in related_cases %}<p>{% if related.state == 'published' %}<a href="{% url 'case' related.pk %}">{{ related.title }}</a>{% else %}{{ related.title }} · 관리자 미리보기{% endif %}</p>{% endfor %}{% endif %}
+</section>
+<section class="panel" aria-labelledby="article-panel-{{ case.pk }}"><div class="eyebrow">02 · 관련 통합 헌법</div><h2 id="article-panel-{{ case.pk }}">관련 대한예수교장로회 통합 헌법</h2>
+{% for article in articles %}<article class="card"><p class="eyebrow">{{ article.get_document_kind_display }}</p><h3>{{ article.citation }}{% if article.heading %} · {{ article.heading }}{% endif %}</h3>
+<p>조문 자체 확인: {% if article.source_confirmed %}공식 원문·개정 공고 확인{% else %}조문 확인 중{% endif %}
+사건 당시 적용: {{ article.case_applicability }}</p>
+{% if article.source_confirmed %}<p>{{ article.text }}</p><a href="{{ article.source }}" rel="noreferrer noopener">총회 공식 원문</a> · <a href="{{ article.amendment_source }}" rel="noreferrer noopener">개정 공고</a><p>공식 페이지 {{ article.official_page|default:'확인 중' }}
+개정 {{ article.amended_on|default:'확인 중' }} · 시행 {{ article.effective_on|default:'확인 중' }} · 확인 {{ article.checked_on|default:'확인 중' }}</p>{% else %}<p class="notice">공식 원문과 개정 정보를 확인 중입니다. 메모의 조문 번호는 확인 후보이며 본문을 임의로 채우지 않습니다.</p>{% endif %}
+<p>사건 당시 적용 검증 근거: {{ article.case_applicability_reason|default:'확인 중 · 현재 조문을 소급 적용하지 않음' }}</p><h3>현재 조문과 차이</h3><p>{{ article.case_current_difference|default:'차이 확인 중' }}</p><h3>연결되는 이유</h3><p>{{ article.case_relevance|default:'검토 중' }}</p></article>{% empty %}<p>조문 확인 중 · 통합 헌법과 헌법시행규정을 구분하여 공식 원문·개정일·사건 당시 적용 여부를 검증해야 합니다.</p>{% endfor %}
+</section>
+<section class="panel" aria-labelledby="status-panel-{{ case.pk }}"><div class="eyebrow">03 · 현재 상황과 판단 참고</div><h2 id="status-panel-{{ case.pk }}">현재 상황과 검토 쟁점</h2>
+<h3>현재 처리 상태</h3><p>{{ case.status|default:'최근 상태 확인 필요' }}</p><p class="eyebrow">상태 확인 기준일 {{ case.status_as_of|default:'확인 중' }}</p>
+<h3>공식 결정 · 이전·이후 결정</h3>
+{% for decision in decisions %}<article class="card"><strong>{% if decision.source_confirmed %}원문 확인한 공식 결정{% else %}결정 원자료 확인 중 · 공식 판단으로 확정하지 않음{% endif %}</strong><p>기관: {{ decision.institution|default:'확인 중' }}
+사건번호: {{ decision.case_number|default:'확인 중' }}
+결정일: {{ decision.decided_on|default:'확인 중' }} · 송달일: {{ decision.served_on|default:'확인 중' }}</p>
+{% if decision.source_confirmed %}<p>결과 유형: {{ decision.get_outcome_display }}
+주문: {{ decision.order|default:'확인 중' }}
+판단 범위: {{ decision.scope|default:'확인 중' }}
+상소 여부: {{ decision.appeal_status|default:'최근 상태 확인 필요' }}
+확정 여부: {{ decision.get_finality_display }}</p>{% else %}<p>주문·판단 범위·개별 결과·상소·확정 여부는 원자료 및 최근 상태 확인이 필요합니다.</p>{% endif %}<p>근거 문서: {% if decision.visible_document %}{{ decision.document.title|default:'확인 중' }} · {{ decision.locator|default:'위치 확인 중' }}{% else %}교인 열람본 확인 중{% endif %}</p></article>{% empty %}<p>원자료로 검증한 결정 없음 · 무죄·불기소·기각·판단 제외·확정 여부를 구분해야 합니다.</p>{% endfor %}
+{% if case.decisions %}<h3>기존 결정 기재 · 원자료 확인 필요</h3><p>{{ case.decisions }}</p>{% endif %}
+<h3>양측 설명과 반론</h3><p>{{ case.responses|default:'자료 확인 중 · 답변 미접수는 잘못의 인정이 아닙니다.' }}</p><h3>조문과 비교할 검토 쟁점</h3><p>{{ case.issues|default:'자료 확인 중' }}</p><h3>추가로 필요한 자료</h3><p>{{ case.additional_materials|default:'자료 확인 중' }}</p><h3>운영진 검토 의견과 근거</h3>{% for statement in opinion_statements %}<article class="card"><strong class="tag">운영진 검토 의견 · 공식 판단 아님</strong><p>{{ statement.text }}</p><p>근거: {{ statement.source_note }}{% if statement.visible_evidence %} · {{ statement.evidence.document.title }} · {{ statement.evidence.locator }}{% endif %}</p></article>{% endfor %}<p>{{ case.opinion|default:'등록된 의견 없음' }}</p><p class="notice">운영진 의견은 공식 판단이 아닙니다. 일부 항목의 판단을 사건 전체나 모든 행동의 결론으로 확대하지 않습니다. 사건별 재판·재항고 결론을 합치지 않습니다.</p>
+{% if not preview %}<a href="/requests/?case={{ case.pk }}">이 사건의 비공개 반론·자료 제출·정정 요청</a>{% endif %}
+</section></div>
+<section class="card"><h2>정정·변경 이력</h2>{% for change in case.changes.all %}<p class="eyebrow">{{ change.published_at }}</p><p>{{ change.summary }}</p>{% empty %}<p>공개 정정·변경 요약이 아직 없습니다.</p>{% endfor %}<p>원본·민감한 과거 버전은 이 화면에 자동 공개하지 않습니다.</p></section>

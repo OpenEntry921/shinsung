@@ -77,7 +77,7 @@ def cases(request):
     if q: queryset=queryset.filter(Q(title__icontains=q)|Q(topic__icontains=q))
     topic=request.GET.get('topic','')[:100]
     if topic: queryset=queryset.filter(topic__icontains=topic)
-    direction=request.GET.get('order','asc')
+    direction='desc' if request.GET.get('order')=='desc' else 'asc'
     queryset=queryset.annotate(sort_year=Coalesce(ExtractYear('occurred_on'),'occurred_year',Value(9999),output_field=IntegerField()),sort_month=Coalesce(ExtractMonth('occurred_on'),'occurred_month',Value(0),output_field=IntegerField()),sort_day=Coalesce(ExtractDay('occurred_on'),Value(0),output_field=IntegerField()))
     items=list(queryset)
     items.sort(key=lambda c:(c.sort_year,c.sort_month,c.sort_day,c.pk),reverse=direction=='desc')
@@ -90,7 +90,12 @@ def cases(request):
         if start or end:
             items=[c for c in items if c.date_bounds()[0] and (not start or c.date_bounds()[1]>=start) and (not end or c.date_bounds()[0]<=end)]
     except ValueError: items=[];error='기간을 확인하세요.'
-    return render(request,'portal/cases.html',{'cases':items,'q':q,'direction':direction,'error':error})
+    from django.core.paginator import Paginator
+    from .case_services import case_context
+    page=Paginator(items,5).get_page(request.GET.get('page'))
+    query=request.GET.copy();query.pop('page',None)
+    encoded=query.urlencode()
+    return render(request,'portal/cases.html',{'cases':page.object_list,'case_groups':[case_context(case) for case in page], 'page_obj':page,'page_query':encoded+'&' if encoded else '', 'result_count':len(items),'filtered':bool(q or topic or request.GET.get('from') or request.GET.get('to')),'q':q,'direction':direction,'error':error})
 def case_detail(request,pk):
     from .case_services import case_context
     case=get_object_or_404(Case,pk=pk,state='published')
