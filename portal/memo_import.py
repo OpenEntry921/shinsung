@@ -2,7 +2,9 @@
 import hashlib
 import re
 import zipfile
-from xml.etree import ElementTree
+from defusedxml import ElementTree
+from defusedxml.common import DefusedXmlException
+from xml.etree.ElementTree import ParseError
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -47,9 +49,9 @@ def validate_docx(file):
             if any('vbaProject' in x.filename or x.filename.startswith('word/embeddings/') for x in entries): raise ValidationError('매크로·내장 파일이 있는 문서는 허용하지 않습니다.')
             xml=archive.read('word/document.xml')
             if b'<!DOCTYPE' in xml.upper() or b'<!ENTITY' in xml.upper(): raise ValidationError('외부 엔터티는 허용하지 않습니다.')
-            ElementTree.fromstring(xml)
+            ElementTree.fromstring(xml,forbid_dtd=True)
             return xml
-    except (zipfile.BadZipFile,KeyError,ElementTree.ParseError): raise ValidationError('유효한 DOCX 문서가 아닙니다.')
+    except (zipfile.BadZipFile,KeyError,ParseError,DefusedXmlException): raise ValidationError('유효한 DOCX 문서가 아닙니다.')
     finally: file.seek(0)
 
 @transaction.atomic
@@ -66,7 +68,7 @@ def extract_candidates(document,actor):
     batch,created=MemoImport.objects.get_or_create(digest=digest,defaults={'document':document,'author':actor})
     if not created: return batch,False
     groups={};excluded=0;unclassified=0;strategy_section=False
-    root=ElementTree.fromstring(xml)
+    root=ElementTree.fromstring(xml,forbid_dtd=True)
     body=root.find(W+'body')
     blocks=[];paragraph_index=0;table_index=0
     for element in list(body) if body is not None else []:
