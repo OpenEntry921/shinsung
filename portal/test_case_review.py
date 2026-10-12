@@ -217,6 +217,13 @@ class CaseReviewTests(TestCase):
         entry=CaseAdmin(Case,AdminSite()).log_change(request,self.case,'가상 수정')
         self.assertEqual(entry.object_repr,f'case:{self.case.pk}');self.assertNotIn(self.case.title,entry.object_repr)
 
+    def test_utf16_docx_entity_declarations_are_rejected(self):
+        from .memo_import import validate_docx
+        payload='<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE w:document [<!ENTITY synthetic "가상 카페">]><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>&synthetic;</w:t></w:r></w:p></w:body></w:document>'
+        buffer=io.BytesIO()
+        with zipfile.ZipFile(buffer,'w') as z:z.writestr('word/document.xml',payload.encode('utf-16'))
+        with self.assertRaises(ValidationError):validate_docx(SimpleUploadedFile('synthetic-entity.docx',buffer.getvalue()))
+
 from django.test import TransactionTestCase
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
