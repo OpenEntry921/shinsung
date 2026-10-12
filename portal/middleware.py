@@ -17,7 +17,7 @@ class AccessMiddleware:
         path=request.path
         public=path in ('/login/','/otp/','/exception/','/policy/','/health/') or path.startswith('/static/')
         admin_public=path in ('/admin/login/','/admin/logout/','/admin-mfa/')
-        if path.startswith('/admin') or path.startswith('/roster/') or path.startswith('/exception-issue/'):
+        if path.startswith('/admin') or path.startswith('/roster/') or path.startswith('/exception-issue/') or path.startswith('/materials/'):
             if not admin_public:
                 if not request.user.is_authenticated or not request.user.is_staff: return redirect('/admin/login/')
                 if request.session.get('admin_mfa_until',0) < timezone.now().timestamp(): return redirect('/admin-mfa/')
