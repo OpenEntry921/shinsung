@@ -14,8 +14,8 @@ Cloudtype에서 PostgreSQL 서비스 제공 여부와 접속 정보를 확인하
 
 ```sh
 python -m pip install --target /tmp/shinsung-transfer-lib 'psycopg[binary]==3.3.6'
-# COMMIT_SHA는 검토한 PR 커밋으로 바꿉니다. 다운로드 실패 시 실행하지 않습니다.
-curl --fail --location 'https://raw.githubusercontent.com/OpenEntry921/shinsung/COMMIT_SHA/scripts/sqlite_transfer.py' --output /tmp/sqlite_transfer.py
+# 검토된 스크립트 커밋에 고정합니다. 다운로드 실패 시 실행하지 않습니다.
+curl --fail --location 'https://raw.githubusercontent.com/OpenEntry921/shinsung/b3c21a92a3da5dae267bfe7bc48b7efaecea6a85/scripts/sqlite_transfer.py' --output /tmp/sqlite_transfer.py
 PYTHONPATH=/tmp/shinsung-transfer-lib python /tmp/sqlite_transfer.py --source /data/portal.sqlite3 --persistence-confirmed
 ```
 
