@@ -48,3 +48,11 @@ class RosterLoginTests(TestCase):
             response=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone},follow=True)
             self.assertEqual(response.status_code,200)
             self.assertEqual(response.content.count(b'class="case-group direct-case"'),30)
+
+    def test_corrected_input_and_relogin_have_no_sms_resend_delay(self):
+        self.client.post('/login/',{'name':'가상 잘못된이름','phone':self.member.phone})
+        self.assertNotIn('member_id',self.client.session)
+        self.assertEqual(self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone}).status_code,302)
+        self.client.post('/logout/')
+        self.assertEqual(self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone}).status_code,302)
+        self.assertEqual(self.client.session['member_id'],str(self.member.pk))

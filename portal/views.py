@@ -26,7 +26,6 @@ def login(request):
         number=phone(request.POST.get('phone',''))[:20]
         allowed=limit('ip:'+request.META.get('REMOTE_ADDR',''),20,3600)
         if allowed: allowed=limit('phone-hour:'+number,5,3600)
-        if allowed: allowed=limit('phone-minute:'+number,1,60)
         if allowed and name and number:
             with transaction.atomic():
                 matches=Member.objects.select_for_update().filter(name=name,phone=number,active=True)
