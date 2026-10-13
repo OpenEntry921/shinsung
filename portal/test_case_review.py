@@ -1,4 +1,5 @@
 """No real memo, person, statute or judgment is used in these tests."""
+from django.conf import settings
 import datetime
 import io
 import tempfile
@@ -30,7 +31,7 @@ class CaseReviewTests(TestCase):
             case.state='published';case.reviewer=self.reviewer;case.save()
     def login_member(self):
         production=override_settings(DEV=False,APP_MODE="production");production.enable();self.addCleanup(production.disable)
-        session=self.client.session;session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session.save()
+        session=self.client.session;session['member_auth_mode']=settings.APP_MODE;session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session.save()
     def login_staff(self,user=None,permissions=()):
         user=user or self.editor
         user.user_permissions.add(*Permission.objects.filter(codename__in=permissions))

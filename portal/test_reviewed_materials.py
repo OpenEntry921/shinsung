@@ -1,4 +1,5 @@
 """Only fictional documents and identities; never the user's source or manifest."""
+from django.conf import settings
 import copy,hashlib,io,json,tempfile,zipfile
 from pathlib import Path
 from unittest.mock import patch
@@ -28,7 +29,7 @@ class ReviewedMaterialTests(TestCase):
     def write(self):self.manifest.write_text(json.dumps(self.plan,ensure_ascii=False))
     def run_import(self,**kwargs):return register(self.source,self.manifest,self.author.username,self.reviewer.username,reason='가상 편집 검토 승인',**kwargs)
     def member_session(self):
-        session=self.client.session;session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session.save()
+        session=self.client.session;session['member_auth_mode']=settings.APP_MODE;session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session.save()
     def test_preview_and_atomic_published_registration(self):
         self.assertEqual(self.run_import()['create_cases'],1);self.assertEqual(Case.objects.count(),0)
         result=self.run_import(apply=True,publish=True);self.assertEqual(result['published_cases'],1)

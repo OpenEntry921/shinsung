@@ -1,4 +1,5 @@
 """Security and structure assertions do not copy confidential excerpts into tests."""
+from django.conf import settings
 import tempfile
 from pathlib import Path
 from django.test import TestCase, override_settings
@@ -17,7 +18,7 @@ class DirectHTMLReadingTests(TestCase):
         setting=override_settings(MEDIA_ROOT=Path(self.temp.name));setting.enable();self.addCleanup(setting.disable)
         self.login()
     def login(self):
-        session=self.client.session;session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session['member_auth']='sms';session.save()
+        session=self.client.session;session['member_auth_mode']=settings.APP_MODE;session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session['member_auth']='sms';session.save()
     def test_all_thirty_entries_four_sections_no_material_queries_or_file(self):
         post=Post.objects.create(member=self.member,author_name=self.member.name,title='가상 글',body='보존')
         self.assertEqual((Case.objects.count(),Article.objects.count(),Document.objects.count()),(0,0,0))
@@ -57,5 +58,5 @@ class DirectHTMLReadingTests(TestCase):
         self.assertEqual(self.client.get('/').status_code,200)
         self.client.logout();self.login()
         with override_settings(DEV=True,APP_MODE='development'):
-            self.assertEqual(self.client.get('/').status_code,403)
+            self.assertRedirects(self.client.get('/'),'/login/',fetch_redirect_response=False)
             self.assertEqual(self.client.post('/logout/').status_code,302)

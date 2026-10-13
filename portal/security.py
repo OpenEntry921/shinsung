@@ -7,7 +7,7 @@ from .models import RateBucket
 
 def phone(value): return re.sub(r'[\s-]', '', str(value).strip())
 def keyed(value): return hmac.new(settings.SECRET_KEY.encode(),value.encode(),hashlib.sha256).hexdigest()
-def digest(cid, code): return keyed(f'{cid}:{code}')
+def digest(cid, code): return keyed(f'{settings.APP_MODE}:{cid}:{code}')
 def limit(key, maximum, seconds):
     with transaction.atomic():
         bucket,_ = RateBucket.objects.select_for_update().get_or_create(key=keyed(key))
