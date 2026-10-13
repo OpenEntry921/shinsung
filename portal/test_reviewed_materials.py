@@ -64,9 +64,9 @@ class ReviewedMaterialTests(TestCase):
     def test_db_import_does_not_control_fixed_member_body(self):
         self.run_import(apply=True,publish=True);self.member_session()
         response=self.client.get('/')
-        self.assertNotContains(response,'가상 원문 발췌')
-        self.assertContains(response,'본문 파일이 아직 배치되지 않았습니다')
-        self.assertNotContains(response,'검색 조건 초기화')
+        self.assertNotContains(response,'가상 원문 발췌',status_code=503)
+        self.assertContains(response,'보호된 본문을 확인할 수 없습니다',status_code=503)
+        self.assertNotContains(response,'검색 조건 초기화',status_code=503)
     def test_original_guest_inactive_and_direct_link_protection(self):
         self.run_import(apply=True,publish=True);case=Case.objects.get();doc=Document.objects.get()
         for url in ('/',f'/cases/{case.pk}/',f'/documents/{doc.pk}/original/',f'/documents/{doc.pk}/reading/'):

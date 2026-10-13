@@ -7,6 +7,6 @@
 <p class="eyebrow">오래된 사건부터 · 월·연도·기간 표현을 보존합니다. 같은 기간 안의 정확한 선후관계는 확인되지 않을 수 있습니다.</p>
 {% for entry in reading.dated_entries %}{% include 'portal/fixed_case_entry.html' %}{% endfor %}
 {% if reading.uncertain_entries %}<h2>순서를 확정할 수 없는 사건</h2>{% for entry in reading.uncertain_entries %}{% include 'portal/fixed_case_entry.html' %}{% endfor %}{% endif %}
-{% elif reading_error %}<p>보호된 본문 파일을 확인할 수 없습니다. 관리자에게 문의하세요.</p>
-{% else %}<p>보호된 본문 파일이 아직 배치되지 않았습니다. 관리자에게 문의하세요.</p>{% endif %}
+{% elif reading_error %}<p>보호된 본문을 확인할 수 없습니다. 관리자에게 문의하세요.{% if request.user.is_staff %} 관리자는 case_reading_status로 배포 파일과 비밀키 설정을 확인하세요.{% endif %}</p>
+{% else %}<p>보호된 본문을 확인할 수 없습니다. 관리자에게 문의하세요.</p>{% endif %}
 {% endblock %}

@@ -9,6 +9,12 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from .models import Member, Case, Post
 from .fixed_reading import load_reading, ReadingUnavailable
+from scripts.encrypt_case_reading import encrypt
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+import base64
+from django.core.management import call_command
+import io
 
 
 @override_settings(DEV=False, APP_MODE='production', SECURE_SSL_REDIRECT=False, SESSION_COOKIE_SECURE=False)
@@ -16,8 +22,10 @@ class FixedReadingTests(TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
-        self.path = Path(self.directory.name)/'case-reading.body'
-        self.settings_override = override_settings(MEDIA_ROOT=Path(self.directory.name))
+        self.path = Path(self.directory.name)/'case-reading.enc'
+        self.key=rsa.generate_private_key(public_exponent=65537,key_size=3072)
+        encoded=base64.b64encode(self.key.private_bytes(serialization.Encoding.DER,serialization.PrivateFormat.PKCS8,serialization.NoEncryption())).decode('ascii')
+        self.settings_override = override_settings(CASE_READING_ENCRYPTED_PATH=self.path,CASE_READING_PRIVATE_KEY=encoded)
         self.settings_override.enable()
         self.addCleanup(self.settings_override.disable)
         self.member = Member.objects.create(name='가상교인', phone='01000000000', synthetic=True)
@@ -30,7 +38,7 @@ class FixedReadingTests(TestCase):
         return dict(key=key, title='가상 사건 '+key, order=order or [2025, 1, 2], date_label='2025년 1월 2일', ordering_note='', source='가상 표 1행', overview='가상 본문 <script>alert(1)</script>', legacy_ids=[17] if key=='F01' else [], issues='가상 쟁점', needed='가상 추가 자료', responses='가상 입장 설명', statements=[dict(kind='unknown',presentation='summary',text='가상 미확인 설명',source='가상 표 1행')], rules=[dict(citation='가상 제999조',description='가상 조항 설명',source='가상 절',relevance='가상 관련성')])
 
     def write(self):
-        self.path.write_text(json.dumps(self.body, ensure_ascii=False))
+        self.path.write_text(json.dumps(encrypt(json.dumps(self.body,ensure_ascii=False).encode(),self.key.public_key())))
 
     def login(self):
         session=self.client.session
@@ -95,17 +103,49 @@ class FixedReadingTests(TestCase):
         session=self.client.session;session['admin_mfa_until']=0;session.save()
         self.assertEqual(self.client.get('/cases/material/F01/').status_code,302)
 
-    def test_demo_malformed_missing_and_checkout_paths(self):
+    def test_demo_missing_invalid_keys_and_damaged_ciphertext(self):
         with override_settings(DEV=True,APP_MODE='development'):
             self.assertEqual(self.client.get('/').status_code,403)
+        for key,code in [('', 'private_key_missing'), ('not-a-private-key', 'private_key_invalid')]:
+            with override_settings(CASE_READING_PRIVATE_KEY=key):
+                with self.assertRaises(ReadingUnavailable) as caught:load_reading()
+                self.assertEqual(caught.exception.code,code)
+                r=self.client.get('/');self.assertEqual(r.status_code,503)
+                self.assertNotIn('가상 본문',r.content.decode());self.assertNotIn(key,r.content.decode()) if key else None
+                output=io.StringIO()
+                with self.assertRaises(SystemExit):call_command('case_reading_status',stdout=output)
+                self.assertEqual(json.loads(output.getvalue())['reason'],code)
+        other=rsa.generate_private_key(public_exponent=65537,key_size=3072)
+        wrong=base64.b64encode(other.private_bytes(serialization.Encoding.DER,serialization.PrivateFormat.PKCS8,serialization.NoEncryption())).decode()
+        with override_settings(CASE_READING_PRIVATE_KEY=wrong):
+            with self.assertRaises(ReadingUnavailable) as caught:load_reading()
+            self.assertEqual(caught.exception.code,'decrypt_failed')
+        envelope=json.loads(self.path.read_text());damaged=bytearray(base64.b64decode(envelope['ciphertext']));damaged[0]^=1
+        envelope['ciphertext']=base64.b64encode(damaged).decode();self.path.write_text(json.dumps(envelope))
+        with self.assertRaises(ReadingUnavailable) as caught:load_reading()
+        self.assertEqual(caught.exception.code,'decrypt_failed')
         self.path.write_text('{bad')
-        self.assertEqual(self.client.get('/').status_code,503)
-        self.assertNotContains(self.client.get('/'),'bad',status_code=503)
+        with self.assertRaises(ReadingUnavailable) as caught:load_reading()
+        self.assertEqual(caught.exception.code,'ciphertext_invalid')
         self.path.unlink()
-        self.assertContains(self.client.get('/'),'본문 파일이 아직 배치되지 않았습니다')
-        with override_settings(BASE_DIR=Path(self.directory.name)):
-            self.write()
-            with self.assertRaises(ReadingUnavailable):load_reading()
+        with self.assertRaises(ReadingUnavailable) as caught:load_reading()
+        self.assertEqual(caught.exception.code,'ciphertext_missing')
+
+    def test_ciphertext_and_key_are_not_public_and_no_plaintext_is_written(self):
+        self.assertNotIn('가상 본문',self.path.read_text())
+        before=set(Path(self.directory.name).iterdir());body=load_reading()
+        self.assertEqual(set(Path(self.directory.name).iterdir()),before)
+        self.assertEqual(len(body['entries']),1)
+        for url in ('/server_materials/case-reading.enc','/static/server_materials/case-reading.enc'):
+            r=self.client.get(url);self.assertEqual(r.status_code,404)
+            self.assertNotIn('ciphertext',r.content.decode())
+        self.client.logout()
+        from unittest.mock import patch
+        with patch('portal.fixed_reading.load_reading',side_effect=AssertionError('Unauthenticated decryption attempted')):
+            self.assertEqual(self.client.get('/').status_code,302)
+        self.login();output=io.StringIO();call_command('case_reading_status',stdout=output)
+        report=json.loads(output.getvalue());self.assertTrue(report['ready']);self.assertEqual(report['cases'],1)
+        self.assertNotIn('가상',output.getvalue())
 
     def test_long_text_multiple_rules_fallback_and_no_truncation(self):
         e=self.body['entries'][0];e['overview']='가상 긴 본문 '*1000+'가상 끝표시'
