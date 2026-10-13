@@ -70,26 +70,17 @@ def admin_mfa(request):
     return render(request,'portal/mfa.html',{'error':error})
 
 def cases(request):
-    from .fixed_reading import load_reading, ReadingUnavailable
-    try:
-        reading = load_reading()
-    except ReadingUnavailable:
-        return render(request, 'portal/cases.html', {'reading_error': True}, status=503)
-    return render(request, 'portal/cases.html', {'reading': reading})
+    return render(request, 'portal/cases.html')
 
 
 def case_detail(request, pk=None, key=None):
-    from .fixed_reading import load_reading, ReadingUnavailable
     from django.http import Http404
-    try:
-        reading = load_reading()
-    except ReadingUnavailable:
-        return HttpResponse('보호된 자료를 확인할 수 없습니다. 관리자에게 문의하세요.', status=503)
-    entries = reading['entries'] if reading else []
-    entry = next((e for e in entries if (key is not None and e['key'] == key) or (pk is not None and pk in e.get('legacy_ids', []))), None)
-    if entry is None:
+    if pk is not None and 1 <= pk <= 30:
+        key = f'E{pk:02}'
+    if key not in {f'E{i:02}' for i in range(1, 31)}:
         raise Http404
-    return redirect('/#material-' + entry['key'])
+    return redirect('/#material-' + key)
+
 
 def documents(request,pk,kind):
     doc=get_object_or_404(Document,pk=pk)

@@ -26,12 +26,8 @@ class AccessMiddleware:
         # Public demo OTPs must never unlock an accidentally reused real-material database.
         fixed_path=path=='/' or path.startswith('/cases/')
         fixed_admin=(request.user.is_authenticated and request.user.is_active and request.user.is_staff and request.user.has_perm('portal.view_case') and request.session.get('admin_mfa_until',0)>timezone.now().timestamp()) if fixed_path else False
-        if fixed_path and settings.DEV:
-            from .fixed_reading import reading_path
-            if reading_path().exists():
-                response=HttpResponseForbidden('실제 본문은 운영 인증 환경에서만 열람할 수 있습니다.')
-                response['Cache-Control']='no-store, private'
-                return response
+        if fixed_path and settings.DEV and (request.member or fixed_admin):
+            return HttpResponseForbidden('실제 사건 본문은 운영 인증 환경에서만 열람할 수 있습니다.')
         admin_path=path.startswith(('/admin','/roster/','/exception-issue/','/materials/'))
         if request.member and settings.DEV and not public and not admin_path and not fixed_path and ReviewedMaterialImport.objects.exists():
             response=HttpResponseForbidden('시연 저장소와 실제 자료 저장소를 분리하고 운영 모드에서 열람하세요.')
