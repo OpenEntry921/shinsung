@@ -33,6 +33,10 @@ class ReviewedMaterialTests(TestCase):
         self.assertEqual(self.run_import()['create_cases'],1);self.assertEqual(Case.objects.count(),0)
         result=self.run_import(apply=True,publish=True);self.assertEqual(result['published_cases'],1)
         self.assertEqual(Document.objects.get().state,'draft');self.assertTrue(Document.objects.get().internal_memo)
+        from django.db import connection
+        if connection.vendor == 'postgresql':
+            self.assertEqual(bytes(Document.objects.get().original_blob), self.source.read_bytes())
+            self.assertFalse(Document.objects.get().original)
         self.assertFalse(Article.objects.get().verified);self.assertEqual(RegisteredMaterialCase.objects.get().verification,'memo_only')
         self.assertTrue(Member.objects.filter(pk=self.member.pk).exists());self.assertTrue(Post.objects.filter(pk=self.post.pk).exists())
     def test_repeat_preserves_ids_admin_edits_and_withdrawal(self):
@@ -61,11 +65,11 @@ class ReviewedMaterialTests(TestCase):
         self.reviewer.user_permissions.clear()
         with self.assertRaises(ImportRejected):self.run_import(apply=True,publish=True)
         self.assertEqual(Case.objects.count(),0)
-    def test_db_import_does_not_control_fixed_member_body(self):
+    def test_db_import_supplies_member_body_without_file(self):
         self.run_import(apply=True,publish=True);self.member_session()
         response=self.client.get('/')
-        self.assertNotContains(response,'가상 원문 발췌')
-        self.assertContains(response,'본문 파일이 아직 배치되지 않았습니다')
+        self.assertContains(response,'가상 원문 발췌')
+        self.assertContains(response,'공식 원문 미대조')
         self.assertNotContains(response,'검색 조건 초기화')
     def test_original_guest_inactive_and_direct_link_protection(self):
         self.run_import(apply=True,publish=True);case=Case.objects.get();doc=Document.objects.get()
@@ -86,7 +90,10 @@ class ReviewedMaterialTests(TestCase):
         from .case_services import publication_errors
         self.run_import(apply=True,publish=True)
         doc=Document.objects.get()
-        with open(doc.original.path,'wb') as stream:stream.write(b'fictitious altered source')
+        if doc.original_blob is not None:
+            Document.objects.filter(pk=doc.pk).update(original_blob=b'fictitious altered source')
+        else:
+            with open(doc.original.path,'wb') as stream:stream.write(b'fictitious altered source')
         self.assertTrue(any('현재 원본이 다릅니다' in error for error in publication_errors(Case.objects.get())))
 
     def test_same_source_under_new_key_cannot_duplicate_cases(self):

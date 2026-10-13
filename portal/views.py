@@ -70,7 +70,7 @@ def admin_mfa(request):
     return render(request,'portal/mfa.html',{'error':error})
 
 def cases(request):
-    from .fixed_reading import load_reading, ReadingUnavailable
+    from .database_reading import load_reading, ReadingUnavailable
     try:
         reading = load_reading()
     except ReadingUnavailable:
@@ -79,7 +79,7 @@ def cases(request):
 
 
 def case_detail(request, pk=None, key=None):
-    from .fixed_reading import load_reading, ReadingUnavailable
+    from .database_reading import load_reading, ReadingUnavailable
     from django.http import Http404
     try:
         reading = load_reading()
@@ -95,6 +95,9 @@ def documents(request,pk,kind):
     doc=get_object_or_404(Document,pk=pk)
     if kind=='original':
         if not (request.user.is_authenticated and request.user.has_perm('portal.view_document') and request.session.get('admin_mfa_until',0)>timezone.now().timestamp()): return HttpResponseForbidden()
+        if doc.original_blob is not None:
+            import io
+            return FileResponse(io.BytesIO(bytes(doc.original_blob)),as_attachment=True,filename=f'document-{doc.pk}.docx',content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
         file=doc.original
     elif kind=='reading' and request.member and not doc.internal_memo and doc.state=='published' and doc.redaction_checked and Case.objects.filter(Q(documents=doc)|Q(evidence_links__document=doc),state='published').exists(): file=doc.reading
     else: return HttpResponseForbidden()

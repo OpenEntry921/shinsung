@@ -50,8 +50,12 @@ def publication_errors(case):
         import hashlib
         try:
             digest=hashlib.sha256()
-            with registration.batch.document.original.open('rb') as original:
-                for chunk in original.chunks(): digest.update(chunk)
+            document = registration.batch.document
+            if document.original_blob is not None:
+                digest.update(bytes(document.original_blob))
+            else:
+                with document.original.open('rb') as original:
+                    for chunk in original.chunks(): digest.update(chunk)
             if digest.hexdigest()!=registration.batch.source_digest:
                 errors.append('최초 검토한 원문과 현재 원본이 다릅니다. 발췌·출처를 재대조하세요.')
         except (OSError,ValueError): errors.append('최초 검토 원본이 비공개 저장소에 보존되어 있는지 확인하세요.')

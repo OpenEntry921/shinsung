@@ -6,6 +6,8 @@ class Command(BaseCommand):
     help='Backup while the app is stopped; output must be private, outside repository.'
     def add_arguments(self,parser): parser.add_argument('destination')
     def handle(self,*args,**options):
+        from django.db import connection
+        if connection.vendor != "sqlite": raise CommandError("이 명령은 SQLite 전용입니다. PostgreSQL 서비스의 백업·복구 절차를 사용하세요.")
         dest=Path(options['destination']).resolve()
         if dest==settings.BASE_DIR or settings.BASE_DIR in dest.parents or dest.exists(): raise CommandError('저장소 밖의 새 비공개 디렉터리를 지정하세요.')
         dest.mkdir(parents=True,mode=0o700)
@@ -15,4 +17,4 @@ class Command(BaseCommand):
         (dest/'manifest.json').write_text(json.dumps(hashes))
         for p in dest.rglob('*'):
             os.chmod(p,0o700 if p.is_dir() else 0o600)
-        self.stdout.write('비공개 백업 완료. 암호화된 외부 저장소로 이동하고 30일 회전 정책을 적용하세요.')
+        self.stdout.write('컨테이너 내부 사본 생성. 외부 반출·검증 전에는 백업 완료가 아닙니다.')

@@ -20,6 +20,8 @@ class PortalTests(TestCase):
         self.approver=User.objects.create_user('test-approver',password='synthetic-test-password',is_staff=True)
         self.case=Case.objects.create(title='가상 테스트 자료',occurred_on='2026-01-01',topic='가상',author=self.staff,reviewer=self.approver,state='published')
     def member_login(self,member=None,client=None):
+        # Protected business-feature checks use production mode; demo OTP has its own tests.
+        production=override_settings(DEV=False,APP_MODE='production');production.enable();self.addCleanup(production.disable)
         member=member or self.member; client=client or self.client
         session=client.session; session['member_id']=str(member.pk); session['member_version']=member.session_version; session.save()
     def staff_login(self):
@@ -48,7 +50,7 @@ class PortalTests(TestCase):
     def test_otp_success_one_use_hashed(self):
         ch=self.challenge();self.assertNotIn('123456',ch.digest)
         self.assertEqual(self.client.post('/otp/',{'code':'123456'}).status_code,302)
-        self.assertEqual(self.client.get('/').status_code,200)
+        self.assertEqual(self.client.get('/').status_code,403)  # Demo OTP cannot open stored cases.
         session=self.client.session;session['challenge_id']=str(ch.pk);session.save()
         self.assertEqual(self.client.post('/otp/',{'code':'123456'}).status_code,400)
     def test_expired_otp(self):
@@ -228,4 +230,4 @@ class PortalTests(TestCase):
         self.assertEqual(response.status_code,302);self.assertEqual(ChangeNote.objects.get().summary,'가상 정정 요약')
         self.approver.user_permissions.add(Permission.objects.get(codename='view_case'))
         self.assertContains(self.client.get(f'/admin/portal/case/{self.case.pk}/preview/'),'가상 정정 요약')
-        self.member_login();self.assertNotContains(self.client.get('/'),'가상 정정 요약')
+        self.member_login();self.assertContains(self.client.get('/'),'가상 정정 요약')

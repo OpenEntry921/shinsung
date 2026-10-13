@@ -4,7 +4,7 @@
 
 ## 개발 환경
 
-Python 3.12, Django 5.2, SQLite 영구 DB, 비공개 파일 저장을 사용합니다.
+Python 3.12, Django 5.2, 개발용 SQLite 또는 별도 PostgreSQL DB, 비공개 파일 저장을 사용합니다.
 
 ```sh
 sh scripts/install.sh
@@ -21,4 +21,4 @@ APP_MODE=development sh scripts/start-production.sh
 
 자동 생성은 기존 데이터의 백업이나 복구 기능이 아닙니다. 임시 디스크에서 데이터가 사라지면 가상 계정은 다시 생성되지만 이전 게시글·자료는 복구되지 않습니다. 운영 전 영구 저장소와 실제 SMS 연결이 별도로 필요합니다. `APP_MODE`가 없거나 값이 잘못되면 개발 모드로 전환하지 않고 가상 계정을 자동 생성하지 않습니다.
 
-[사건별 네 영역·보호된 고정 본문 안내](docs/CASE_REVIEW.md)를 확인하세요. 사건 열람은 사건 DB 조회 없이 서버의 비공개 본문 파일을 사용합니다. 공개 저장소에는 실제 본문을 포함하지 않으므로 코드 배포와 별도로 검토된 본문 배치가 필요합니다. 교인·관리자 인증 DB의 영구 보존과 실제 SMS는 계속 필요하며 개발 환경에서는 실제 본문을 열람할 수 없습니다.
+[사건별 네 영역·DB 본문 안내](docs/CASE_REVIEW.md) · [PostgreSQL 이관 절차](docs/POSTGRES_MIGRATION.md). 본문과 교인 기록은 별도 PostgreSQL 서비스의 확인된 보존 정책이 필요합니다. 현재 Cloudtype의 디스크 없는 앱 SQLite는 영구 저장으로 취급하지 않습니다. 운영 외부 백업 확인 전 재배포하지 마세요.

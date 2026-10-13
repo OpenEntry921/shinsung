@@ -178,7 +178,8 @@ class Document(models.Model):
     original_checked = models.BooleanField('원자료 직접 확인',default=False)
     served_on = models.DateField('송달일',null=True,blank=True)
     decided_on = models.DateField('결정일',null=True,blank=True)
-    original = models.FileField('원본 (관리자 전용)',upload_to=private_original_path)
+    original = models.FileField('원본 (관리자 전용)',upload_to=private_original_path,blank=True)
+    original_blob = models.BinaryField(null=True,blank=True,editable=False)
     reading = models.FileField('가림 처리 열람본',upload_to=private_reading_path,blank=True)
     source = models.CharField('출처',max_length=300)
     acquired_on = models.DateField('확보일')
@@ -190,6 +191,11 @@ class Document(models.Model):
     def clean(self):
         from .memo_import import validate_docx
         if self.internal_memo and (self.reading or self.state=='published' or self.original_checked): raise ValidationError('내부 메모는 원자료 확인·열람본·교인 공개가 금지됩니다.')
+        if not self.original and self.original_blob is None: raise ValidationError('원본이 필요합니다.')
+        if self.original_blob is not None:
+            import io
+            if not self.internal_memo or self.original or len(self.original_blob)>10*1024*1024: raise ValidationError('DB 원본은 내부 메모만 허용합니다.')
+            validate_docx(io.BytesIO(bytes(self.original_blob)))
         for f in (self.original,self.reading):
             if not f: continue
             if f.size>10*1024*1024: raise ValidationError('10MB 이하 자료만 허용합니다.')
