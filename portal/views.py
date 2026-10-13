@@ -50,6 +50,7 @@ def otp(request):
                 challenge.used=True; challenge.save(); request.session.flush(); rotate_token(request)
                 request.session['member_id']=str(member.id); request.session['member_version']=member.session_version
                 request.session['member_auth']='sms'
+                request.session['member_auth_mode']=settings.APP_MODE
                 request.session.set_expiry(3600)
                 return redirect('/')
             challenge.save()
@@ -198,7 +199,7 @@ def exception_login(request):
                     if ch and ch.attempts<5:
                         ch.attempts+=1; ch.save()
                         if hmac.compare_digest(ch.digest,digest(str(ch.id),code)) and ch.member.active and ch.member.session_version==ch.version and (not settings.DEV or ch.member.synthetic):
-                            ch.used=True; ch.save(); request.session.flush(); rotate_token(request); request.session['member_id']=str(ch.member_id); request.session['member_version']=ch.version; request.session['member_auth']='exception'; request.session.set_expiry(3600); return redirect('/')
+                            ch.used=True; ch.save(); request.session.flush(); rotate_token(request); request.session['member_id']=str(ch.member_id); request.session['member_version']=ch.version; request.session['member_auth']='exception'; request.session['member_auth_mode']=settings.APP_MODE; request.session.set_expiry(3600); return redirect('/')
             except (ValueError,ValidationError): pass
         error='접속 수단을 확인할 수 없습니다.'
     return render(request,'portal/exception.html',{'error':error})

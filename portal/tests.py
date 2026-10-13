@@ -1,3 +1,4 @@
+from django.conf import settings
 import datetime, tempfile, io, json
 from pathlib import Path
 from unittest.mock import patch
@@ -22,7 +23,7 @@ class PortalTests(TestCase):
     def member_login(self,member=None,client=None):
         production=override_settings(DEV=False,APP_MODE="production");production.enable();self.addCleanup(production.disable)
         member=member or self.member; client=client or self.client
-        session=client.session; session['member_id']=str(member.pk); session['member_version']=member.session_version; session.save()
+        session=client.session; session['member_auth_mode']=settings.APP_MODE;session['member_id']=str(member.pk); session['member_version']=member.session_version; session.save()
     def staff_login(self):
         self.client.force_login(self.staff); session=self.client.session; session['admin_mfa_until']=timezone.now().timestamp()+300; session.save()
     def challenge(self,member=None,**kwargs):
@@ -49,7 +50,7 @@ class PortalTests(TestCase):
     def test_otp_success_one_use_hashed(self):
         ch=self.challenge();self.assertNotIn('123456',ch.digest)
         self.assertEqual(self.client.post('/otp/',{'code':'123456'}).status_code,302)
-        self.assertEqual(self.client.get('/').status_code,403)  # Demo OTP cannot read actual excerpts.
+        self.assertRedirects(self.client.get('/'),'/login/',fetch_redirect_response=False)  # Demo OTP cannot read actual excerpts.
         session=self.client.session;session['challenge_id']=str(ch.pk);session.save()
         self.assertEqual(self.client.post('/otp/',{'code':'123456'}).status_code,400)
     def test_expired_otp(self):
