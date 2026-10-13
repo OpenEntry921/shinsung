@@ -6,6 +6,8 @@ class Command(BaseCommand):
     help='Restore verified backup only into an empty DATA_DIR, with server stopped.'
     def add_arguments(self,p): p.add_argument('source')
     def handle(self,*args,**options):
+        from django.db import connection
+        if connection.vendor != "sqlite": raise CommandError("이 명령은 SQLite 전용입니다. PostgreSQL 서비스의 백업·복구 절차를 사용하세요.")
         src=Path(options['source']).resolve(); dest=settings.DATA_DIR
         if any(dest.iterdir()): raise CommandError('DATA_DIR는 비어 있어야 합니다. 서버를 먼저 중지하세요.')
         manifest=json.loads((src/'manifest.json').read_text())

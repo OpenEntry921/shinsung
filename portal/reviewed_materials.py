@@ -7,7 +7,7 @@ from pathlib import Path
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
-from django.db import transaction
+from django.db import transaction, connection
 from django.contrib.auth.models import User
 from .memo_import import validate_docx, W, STRATEGY
 from defusedxml import ElementTree
@@ -37,7 +37,13 @@ def read_plan(source_path, plan_path):
         elif node.tag==W+'tbl' and section in (1,2,3,4,10):
             for n,row in enumerate(node.findall(W+'tr'),1):
                 locations[f'b{index}:r{n}']=' | '.join(''.join(t.text or '' for t in cell.iter(W+'t')) for cell in row.findall(W+'tc'))
-    plan=json.loads(raw)
+    def unique_object(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value: reject()
+            value[key] = item
+        return value
+    plan=json.loads(raw, object_pairs_hook=unique_object)
     if not plan.get('reviewed') or plan.get('source_sha256')!=hashlib.sha256(source).hexdigest(): reject()
     if not re.fullmatch(r'[a-zA-Z0-9_-]{1,100}',plan['key']): reject()
     datetime.date.fromisoformat(plan['basis_on'])
@@ -77,7 +83,9 @@ def register(source_path,plan_path,author_name,reviewer_name,apply=False,publish
             'create_documents':0 if existing else 1,'apply':apply,'publish_requested':publish}
     if not apply: return counts
     directory=settings.DATA_DIR.resolve()
-    if settings.APP_MODE!='production' or not settings.PRIVATE_STORAGE_CONFIRMED or not settings.REAL_MATERIALS_ENABLED or directory==settings.BASE_DIR.resolve() or settings.BASE_DIR.resolve() in directory.parents or settings.MEDIA_ROOT.resolve()!=directory/'private': reject()
+    persistent_db = connection.vendor == 'postgresql' and settings.DATABASE_PERSISTENCE_CONFIRMED
+    private_files = settings.PRIVATE_STORAGE_CONFIRMED and directory != settings.BASE_DIR.resolve() and settings.BASE_DIR.resolve() not in directory.parents and settings.MEDIA_ROOT.resolve() == directory/'private'
+    if settings.APP_MODE != 'production' or not settings.REAL_MATERIALS_ENABLED or not (persistent_db or (connection.vendor == 'sqlite' and private_files)): reject()
     author=User.objects.get(username=author_name);reviewer=User.objects.get(username=reviewer_name)
     if not all((author.is_active,author.is_staff,reviewer.is_active,reviewer.is_staff)) or author.pk==reviewer.pk or not author.has_perm('portal.add_case') or (publish and (not reviewer.has_perm('portal.publish_case') or not reason.strip())): reject()
     if existing:
@@ -88,7 +96,10 @@ def register(source_path,plan_path,author_name,reviewer_name,apply=False,publish
     try:
         with transaction.atomic():
             doc=Document(title=plan['source_filename'],source=plan['source_title'],acquired_on=datetime.date.today(),written_on=plan.get('written_on'),internal_memo=True,excerpt='관리자 전용 내부 검토 원본. 교인 다운로드 금지.',state='draft')
-            doc.original.save('source.docx',ContentFile(source),save=False);saved_file=doc.original
+            if connection.vendor == 'postgresql':
+                doc.original_blob = source
+            else:
+                doc.original.save('source.docx',ContentFile(source),save=False);saved_file=doc.original
             doc.full_clean();doc.save()
             batch=ReviewedMaterialImport.objects.create(key=plan['key'],source_digest=plan['source_sha256'],plan_digest=plan_digest,document=doc,basis_on=plan['basis_on'],author=author,reviewer=reviewer)
             records={}

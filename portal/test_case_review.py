@@ -29,6 +29,7 @@ class CaseReviewTests(TestCase):
         for case in cases or (self.case,):
             case.state='published';case.reviewer=self.reviewer;case.save()
     def login_member(self):
+        production=override_settings(DEV=False,APP_MODE='production');production.enable();self.addCleanup(production.disable)
         session=self.client.session;session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session.save()
     def login_staff(self,user=None,permissions=()):
         user=user or self.editor

@@ -20,6 +20,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATA_DIR = Path(os.environ.get('DATA_DIR', BASE_DIR / 'runtime'))
 DATA_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
 DATABASES = {'default':{'ENGINE':'django.db.backends.sqlite3','NAME':DATA_DIR/'portal.sqlite3','OPTIONS':{'timeout':30}}}
+DATABASE_PERSISTENCE_CONFIRMED = os.environ.get('DATABASE_PERSISTENCE_CONFIRMED', '') == 'true'
+if 'DATABASE_URL' in os.environ:
+    from .database import postgres
+    DATABASES = {'default': postgres(os.environ['DATABASE_URL'])}
 MEDIA_ROOT = DATA_DIR/'private'
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR/'runtime/static'
