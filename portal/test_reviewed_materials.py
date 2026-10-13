@@ -28,7 +28,7 @@ class ReviewedMaterialTests(TestCase):
     def write(self):self.manifest.write_text(json.dumps(self.plan,ensure_ascii=False))
     def run_import(self,**kwargs):return register(self.source,self.manifest,self.author.username,self.reviewer.username,reason='가상 편집 검토 승인',**kwargs)
     def member_session(self):
-        session=self.client.session;session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session.save()
+        session=self.client.session;session['member_auth']='roster';session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session.save()
     def test_preview_and_atomic_published_registration(self):
         self.assertEqual(self.run_import()['create_cases'],1);self.assertEqual(Case.objects.count(),0)
         result=self.run_import(apply=True,publish=True);self.assertEqual(result['published_cases'],1)
@@ -95,8 +95,8 @@ class ReviewedMaterialTests(TestCase):
         with self.assertRaises(ImportRejected):self.run_import(apply=True,publish=True)
         self.assertEqual(Case.objects.count(),1)
 
-    def test_demo_session_cannot_unlock_registered_materials_after_mode_change(self):
+    def test_roster_session_does_not_expose_missing_api_after_mode_change(self):
         self.run_import(apply=True,publish=True);self.member_session();case=Case.objects.get()
         with override_settings(APP_MODE='development',DEV=True):
             for url in ('/api/posts/',):
-                response=self.client.get(url);self.assertEqual(response.status_code,403);self.assertNotIn('가상 원문 발췌',response.content.decode())
+                response=self.client.get(url);self.assertEqual(response.status_code,404);self.assertNotIn('가상 원문 발췌',response.content.decode())
