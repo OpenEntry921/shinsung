@@ -70,66 +70,27 @@ def admin_mfa(request):
     return render(request,'portal/mfa.html',{'error':error})
 
 def cases(request):
-    from django.db.models.functions import Coalesce,ExtractYear,ExtractMonth,ExtractDay
-    from django.db.models import Value,IntegerField
-    queryset=Case.objects.filter(state='published').select_related('source_registration__batch__document')
-    q=request.GET.get('q','')[:200]
-    if q:
-        import re
-        date_parts=re.fullmatch(r'(\d{4})[.\-/](\d{1,2})(?:[.\-/](\d{1,2}))?',q)
-        def date_matches(case):
-            if q in case.date_label: return True
-            if date_parts:
-                year,month,day=date_parts.groups()
-                if case.occurred_on:
-                    if day is not None:
-                        try: target=datetime.date(int(year),int(month),int(day))
-                        except ValueError: return False
-                        start,end=case.date_bounds()
-                        return start<=target<=end
-                    return case.occurred_on.year==int(year) and case.occurred_on.month==int(month)
-                if day is None and case.occurred_precision=='period':
-                    import calendar
-                    try:
-                        lower=datetime.date(int(year),int(month),1)
-                        upper=datetime.date(int(year),int(month),calendar.monthrange(int(year),int(month))[1])
-                    except ValueError: return False
-                    start,end=case.date_bounds()
-                    return bool(start and start<=upper and end>=lower)
-                return day is None and case.occurred_year==int(year) and case.occurred_month==int(month)
-            return False
-        matched_dates={case.pk for case in queryset if date_matches(case)}
-        queryset=queryset.filter(Q(pk__in=matched_dates)|Q(title__icontains=q)|Q(topic__icontains=q)|Q(facts__icontains=q)|Q(unknown__icontains=q)|Q(decisions__icontains=q)|Q(responses__icontains=q)|Q(status__icontains=q)|Q(overview__icontains=q)|Q(timeline__icontains=q)|Q(claims__icontains=q)|Q(issues__icontains=q)|Q(opinion__icontains=q)|Q(additional_materials__icontains=q)|Q(statements__text__icontains=q)|Q(articles__citation__icontains=q)|Q(articles__review_description__icontains=q)|Q(linked_articles__citation__icontains=q)|Q(linked_articles__review_description__icontains=q)|Q(period_description__icontains=q)|Q(source_registration__key__icontains=q)).distinct()
-    topic=request.GET.get('topic','')[:100]
-    if topic: queryset=queryset.filter(topic__icontains=topic)
-    direction='desc' if request.GET.get('order')=='desc' else 'asc'
-    queryset=queryset.annotate(sort_year=Coalesce(ExtractYear('occurred_on'),'occurred_year',Value(9999),output_field=IntegerField()),sort_month=Coalesce(ExtractMonth('occurred_on'),'occurred_month',Value(0),output_field=IntegerField()),sort_day=Coalesce(ExtractDay('occurred_on'),Value(0),output_field=IntegerField()))
-    items=list(queryset)
-    items.sort(key=lambda c:(c.sort_year,c.sort_month,c.sort_day,c.pk),reverse=direction=='desc')
-    items.sort(key=lambda c:c.occurred_on is None and c.occurred_year is None)
-    error=''
+    from .fixed_reading import load_reading, ReadingUnavailable
     try:
-        start=datetime.date.fromisoformat(request.GET['from']) if request.GET.get('from') else None
-        end=datetime.date.fromisoformat(request.GET['to']) if request.GET.get('to') else None
-        if start and end and start>end: raise ValueError()
-        if start or end:
-            items=[c for c in items if c.date_bounds()[0] and (not start or c.date_bounds()[1]>=start) and (not end or c.date_bounds()[0]<=end)]
-    except ValueError: items=[];error='기간을 확인하세요.'
-    from .case_services import case_context
-    groups=[case_context(case) for case in items]
-    rules={}
-    for group in groups:
-        for article in group['articles']:
-            if article.pk not in rules:
-                rules[article.pk]=article
-                article.listed_cases=[]
-            rules[article.pk].listed_cases.append({'case':group['case'],'applicability':article.case_applicability,'reason':article.case_applicability_reason,'relevance':article.case_relevance})
-    return render(request,'portal/cases.html',{'cases':items,'case_groups':groups,'listed_articles':list(rules.values()),'result_count':len(items),'filtered':bool(q or topic or request.GET.get('from') or request.GET.get('to')),'q':q,'direction':direction,'error':error})
+        reading = load_reading()
+    except ReadingUnavailable:
+        return render(request, 'portal/cases.html', {'reading_error': True}, status=503)
+    return render(request, 'portal/cases.html', {'reading': reading})
 
-def case_detail(request,pk):
-    from .case_services import case_context
-    case=get_object_or_404(Case,pk=pk,state='published')
-    return render(request,'portal/case.html',case_context(case))
+
+def case_detail(request, pk=None, key=None):
+    from .fixed_reading import load_reading, ReadingUnavailable
+    from django.http import Http404
+    try:
+        reading = load_reading()
+    except ReadingUnavailable:
+        return HttpResponse('보호된 자료를 확인할 수 없습니다. 관리자에게 문의하세요.', status=503)
+    entries = reading['entries'] if reading else []
+    entry = next((e for e in entries if (key is not None and e['key'] == key) or (pk is not None and pk in e.get('legacy_ids', []))), None)
+    if entry is None:
+        raise Http404
+    return redirect('/#material-' + entry['key'])
+
 def documents(request,pk,kind):
     doc=get_object_or_404(Document,pk=pk)
     if kind=='original':

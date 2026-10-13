@@ -156,7 +156,8 @@ class PortalTests(TestCase):
     def test_case_review_required_and_mobile_order(self):
         self.case.reviewer=self.case.author
         with self.assertRaises(__import__('django').core.exceptions.ValidationError): self.case.full_clean()
-        self.member_login();response=self.client.get(f'/cases/{self.case.pk}/')
+        self.staff.user_permissions.add(Permission.objects.get(codename='view_case'));self.staff_login()
+        response=self.client.get(f'/admin/portal/case/{self.case.pk}/preview/')
         self.assertContains(response,'grid-template-columns:1fr')
         html=response.content.decode();self.assertLess(html.index('01 · 사건'),html.index('02 · 관련'));self.assertLess(html.index('02 · 관련'),html.index('03 · 현재'))
     def test_draft_hidden(self):
@@ -225,4 +226,6 @@ class PortalTests(TestCase):
         self.client.force_login(self.approver);session=self.client.session;session['admin_mfa_until']=timezone.now().timestamp()+300;session.save()
         response=self.client.post(f'/admin/portal/case/{self.case.pk}/change/',self.case_payload('published'))
         self.assertEqual(response.status_code,302);self.assertEqual(ChangeNote.objects.get().summary,'가상 정정 요약')
-        self.member_login();self.assertContains(self.client.get(f'/cases/{self.case.pk}/'),'가상 정정 요약')
+        self.approver.user_permissions.add(Permission.objects.get(codename='view_case'))
+        self.assertContains(self.client.get(f'/admin/portal/case/{self.case.pk}/preview/'),'가상 정정 요약')
+        self.member_login();self.assertNotContains(self.client.get('/'),'가상 정정 요약')

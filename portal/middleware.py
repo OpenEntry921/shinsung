@@ -7,6 +7,12 @@ from .models import Member, ReviewedMaterialImport
 class AccessMiddleware:
     def __init__(self,get_response): self.get_response=get_response
     def __call__(self,request):
+        from django.utils.cache import patch_vary_headers
+        response=self.authorize(request)
+        response['Cache-Control']='no-store, private'
+        patch_vary_headers(response, ('Cookie',))
+        return response
+    def authorize(self,request):
         request.member = None
         mid=request.session.get('member_id')
         if mid:
@@ -18,8 +24,16 @@ class AccessMiddleware:
         public=path in ('/login/','/otp/','/exception/','/policy/','/health/') or path.startswith('/static/')
         admin_public=path in ('/admin/login/','/admin/logout/','/admin-mfa/')
         # Public demo OTPs must never unlock an accidentally reused real-material database.
+        fixed_path=path=='/' or path.startswith('/cases/')
+        fixed_admin=(request.user.is_authenticated and request.user.is_active and request.user.is_staff and request.user.has_perm('portal.view_case') and request.session.get('admin_mfa_until',0)>timezone.now().timestamp()) if fixed_path else False
+        if fixed_path and settings.DEV:
+            from .fixed_reading import reading_path
+            if reading_path().exists():
+                response=HttpResponseForbidden('실제 본문은 운영 인증 환경에서만 열람할 수 있습니다.')
+                response['Cache-Control']='no-store, private'
+                return response
         admin_path=path.startswith(('/admin','/roster/','/exception-issue/','/materials/'))
-        if request.member and settings.DEV and not public and not admin_path and ReviewedMaterialImport.objects.exists():
+        if request.member and settings.DEV and not public and not admin_path and not fixed_path and ReviewedMaterialImport.objects.exists():
             response=HttpResponseForbidden('시연 저장소와 실제 자료 저장소를 분리하고 운영 모드에서 열람하세요.')
             response['Cache-Control']='no-store, private'
             return response
@@ -27,7 +41,7 @@ class AccessMiddleware:
             if not admin_public:
                 if not request.user.is_authenticated or not request.user.is_staff: return redirect('/admin/login/')
                 if request.session.get('admin_mfa_until',0) < timezone.now().timestamp(): return redirect('/admin-mfa/')
-        elif not public and not request.member and not (path.startswith('/documents/') and path.endswith('/original/') and request.user.is_authenticated and request.user.is_staff and request.session.get('admin_mfa_until',0)>timezone.now().timestamp()):
+        elif not public and not request.member and not fixed_admin and not (path.startswith('/documents/') and path.endswith('/original/') and request.user.is_authenticated and request.user.is_staff and request.session.get('admin_mfa_until',0)>timezone.now().timestamp()):
             if path.startswith('/api/') or path.startswith('/documents/'): return HttpResponseForbidden('로그인이 필요합니다.')
             return redirect('/login/')
         response=self.get_response(request)

@@ -1,99 +1,114 @@
-"""Continuous comparison uses fictional content only; no real materials."""
-import datetime
+"""Fixed reading tests contain fictional material only."""
+import json
+import tempfile
+from pathlib import Path
 from django.test import TestCase, override_settings
-from django.contrib.auth.models import User
-from .models import Case, Member, Article, Document, CaseEvidence, CaseStatement, Decision
+from django.contrib.auth.models import User, Permission
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
+from django.utils import timezone
+from .models import Member, Case, Post
+from .fixed_reading import load_reading, ReadingUnavailable
 
-@override_settings(DEV=True, APP_MODE='development', SECURE_SSL_REDIRECT=False, SESSION_COOKIE_SECURE=False)
-class ContinuousCaseTests(TestCase):
+
+@override_settings(DEV=False, APP_MODE='production', SECURE_SSL_REDIRECT=False, SESSION_COOKIE_SECURE=False)
+class FixedReadingTests(TestCase):
     def setUp(self):
-        self.editor=User.objects.create(username='fictitious-list-editor')
-        self.member=Member.objects.create(name='가상교인',phone='01000000000',synthetic=True)
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.path = Path(self.directory.name)/'case-reading.body'
+        self.settings_override = override_settings(MEDIA_ROOT=Path(self.directory.name))
+        self.settings_override.enable()
+        self.addCleanup(self.settings_override.disable)
+        self.member = Member.objects.create(name='가상교인', phone='01000000000', synthetic=True)
+        self.editor = User.objects.create_user('fictitious-admin', is_staff=True)
+        self.body = dict(version=1, reviewed=True, basis_on='2025-01-01', source_title='가상 검토 자료', source_filename='fictional-source', entries=[self.entry()])
+        self.write()
+        self.login()
+
+    def entry(self, key='F01', order=None):
+        return dict(key=key, title='가상 사건 '+key, order=order or [2025, 1, 2], date_label='2025년 1월 2일', ordering_note='', source='가상 표 1행', overview='가상 본문 <script>alert(1)</script>', legacy_ids=[17] if key=='F01' else [], issues='가상 쟁점', needed='가상 추가 자료', responses='가상 입장 설명', statements=[dict(kind='unknown',presentation='summary',text='가상 미확인 설명',source='가상 표 1행')], rules=[dict(citation='가상 제999조',description='가상 조항 설명',source='가상 절',relevance='가상 관련성')])
+
+    def write(self):
+        self.path.write_text(json.dumps(self.body, ensure_ascii=False))
+
+    def login(self):
         session=self.client.session
-        session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session.save()
-    def case(self,title='가상 사건',day=1,**fields):
-        return Case.objects.create(title=title,topic='가상 주제',author=self.editor,state='published',occurred_on=datetime.date(2025,1,day),**fields)
-    def test_full_groups_and_detail_compatibility(self):
-        first=self.case('가상 첫 사건',1,overview='첫 사건 개요',issues='첫 검토 쟁점',opinion='첫 운영 의견')
-        second=self.case('가상 두 번째',2,overview='둘째 개요',issues='둘째 검토 쟁점')
-        response=self.client.get('/');content=response.content.decode()
-        self.assertContains(response,'검색 결과 2건');self.assertContains(response,'class="review-section"',count=3)
-        self.assertNotContains(response,'class="columns"')
-        self.assertLess(content.index('① 사건 경과'),content.index('② 관련 교단 헌법과 규정'));self.assertLess(content.index('② 관련 교단 헌법과 규정'),content.index('③ 쟁점과 추가 확인사항'))
-        for case in (first,second):
-            self.assertContains(response,f'/cases/{case.pk}/')
-            self.assertContains(self.client.get(f'/cases/{case.pk}/'),case.overview)
-    def test_long_text_multiple_articles_and_safe_html(self):
-        case=self.case(overview='가상 본문 '*500+'끝표시 <script>alert(1)</script>')
-        for number in (1,2):Article.objects.create(case=case,citation=f'가상 조문 후보 {number}',text='검증 안 된 본문')
-        Case.objects.filter(pk=case.pk).update(state='published')
-        response=self.client.get('/')
-        self.assertContains(response,'끝표시 &lt;script&gt;alert(1)&lt;/script&gt;')
-        self.assertContains(response,'가상 조문 후보 1');self.assertContains(response,'가상 조문 후보 2')
-        self.assertNotContains(response,'검증 안 된 본문')
-    def test_initial_content_has_all_cases_and_keeps_sort_filters(self):
-        for day in range(1,8):self.case(f'가상 사건 {day}',day)
-        response=self.client.get('/?q=가상&topic=주제&order=desc&from=2025-01-01')
-        self.assertContains(response,'검색 결과 7건')
-        self.assertEqual([c.title for c in response.context['cases']], [f'가상 사건 {n}' for n in range(7,0,-1)])
-        self.assertNotContains(response,'다음 페이지')
-    def test_empty_search_and_reset(self):
-        self.assertContains(self.client.get('/'),'게시된 사건이 아직 없습니다')
-        self.case();response=self.client.get('/?q=없는검색')
-        self.assertContains(response,'검색 조건에 맞는 사건이 없습니다');self.assertContains(response,'검색 조건 초기화')
-    def test_partial_dates_and_unknown_last(self):
-        known=self.case()
-        monthly=Case.objects.create(title='가상 월 사건',author=self.editor,state='published',occurred_precision='month',occurred_year=2024,occurred_month=12)
-        unknown=Case.objects.create(title='가상 날짜 미상',author=self.editor,state='published',occurred_precision='unknown')
-        self.assertEqual(list(self.client.get('/').context['cases']),[monthly,known,unknown])
-        self.assertEqual(list(self.client.get('/?order=desc').context['cases']),[known,monthly,unknown])
-        self.assertContains(self.client.get('/?from=2024-12-15&to=2024-12-20'),'2024년 12월 (월 단위)')
-        monthly.refresh_from_db();self.assertIsNone(monthly.occurred_on)
-    def test_private_document_metadata_and_drafts_not_exposed(self):
-        case=self.case();draft=self.case('가상 초안',2);Case.objects.filter(pk=draft.pk).update(state='review')
-        for state,reading,redaction,memo,title in [('draft','private.pdf',True,False,'비공개 초안 문서'),('published','',True,False,'열람본 없는 문서'),('published','private.pdf',False,False,'가림 미확인 문서'),('draft','',False,True,'내부 메모 제목')]:
-            doc=Document.objects.create(case=case,title=title,source='가상 출처',acquired_on=datetime.date(2025,1,1),state=state,reading=reading,redaction_checked=redaction,internal_memo=memo)
-            evidence=CaseEvidence.objects.create(case=case,document=doc,locator='비공개 위치')
-            CaseStatement.objects.create(case=case,kind='unknown',text='원자료 확인 필요',source_note='확인 중',evidence=evidence)
-            decision=Decision.objects.create(document=doc,locator='비공개 결정 위치');decision.cases.add(case)
-        Case.objects.filter(pk=case.pk).update(state='published')
-        for url in ('/',f'/cases/{case.pk}/'):
-            response=self.client.get(url)
-            for hidden in ('가상 초안','비공개 초안 문서','열람본 없는 문서','가림 미확인 문서','내부 메모 제목','비공개 위치','비공개 결정 위치','/original/'):
-                self.assertNotContains(response,hidden)
-    def test_multiple_approved_reading_documents(self):
-        case=self.case()
-        for n in (1,2):
-            doc=Document.objects.create(case=case,title=f'가상 승인 열람본 {n}',source='가상 출처',acquired_on=datetime.date(2025,1,1),state='published',reading=f'fictitious-{n}.pdf',redaction_checked=True)
-            CaseEvidence.objects.create(case=case,document=doc,locator=f'{n}쪽')
-        Case.objects.filter(pk=case.pk).update(state='published')
-        response=self.client.get('/')
-        for n in (1,2):self.assertContains(response,f'가상 승인 열람본 {n}')
-        self.assertNotContains(response,'/original/')
-    def test_guest_and_inactive_cannot_read_content(self):
-        case=self.case(overview='가상 비공개 본문');self.client.logout()
-        for url in ('/',f'/cases/{case.pk}/'):
-            response=self.client.get(url);self.assertEqual(response.status_code,302);self.assertNotContains(response,case.title,status_code=302)
-        session=self.client.session;session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session.save()
-        Member.objects.filter(pk=self.member.pk).update(active=False)
+        session['member_id']=str(self.member.pk)
+        session['member_version']=self.member.session_version
+        session['member_auth']='sms'
+        session.save()
+
+    def test_no_case_queries_empty_tables_and_auth_preserved(self):
+        post=Post.objects.create(member=self.member,author_name=self.member.name,title='가상 글',body='가상')
+        self.assertEqual(Case.objects.count(),0)
+        with CaptureQueriesContext(connection) as queries:
+            response=self.client.get('/')
+        self.assertContains(response,'가상 본문 &lt;script&gt;')
+        forbidden=('portal_case','portal_article','portal_document','portal_reviewedmaterialimport','portal_registeredmaterialcase','portal_decision')
+        self.assertFalse(any(any(table in q['sql'].lower() for table in forbidden) for q in queries.captured_queries))
+        self.assertEqual(Member.objects.get().pk,self.member.pk)
+        self.assertEqual(Post.objects.get().member_id,self.member.pk)
+        self.assertEqual(User.objects.get().pk,self.editor.pk)
+        self.assertIn('no-store',response['Cache-Control'])
+        self.assertIn('private',response['Cache-Control'])
+
+    def test_each_entry_has_four_vertical_areas_and_search_ignored(self):
+        early=self.entry('F00',[2024,0,0]);early['date_label']='2024년'
+        unknown=self.entry('F02');unknown.update(order=None,date_label='날짜 미확인',ordering_note='가상 원문에 날짜가 없음')
+        self.body['entries'] += [unknown,early];self.write()
+        response=self.client.get('/?q=없는검색&order=desc&from=bad')
+        html=response.content.decode()
+        self.assertLess(html.index('id="material-F00"'),html.index('id="material-F01"'))
+        self.assertLess(html.index('id="material-F01"'),html.index('id="material-F02"'))
+        for heading in ('① 날짜','② 사건 경과','③ 관련 교단 헌법과 규정','④ 쟁점과 추가 확인사항'):
+            self.assertContains(response,heading,count=3)
+        for label in ('검색 결과','검색 조건 초기화','name="q"','class="search"','<script>','class="columns"'):
+            self.assertNotContains(response,label)
+        self.assertContains(response,'원자료 미대조')
+        self.assertContains(response,'반론 자료 미확보')
+        self.assertContains(response,'순서를 확정할 수 없는 사건')
+
+    def test_links_only_use_private_body_aliases(self):
+        with CaptureQueriesContext(connection) as queries:
+            self.assertRedirects(self.client.get('/cases/17/'),'/#material-F01',fetch_redirect_response=False)
+        self.assertFalse(any('portal_case' in q['sql'].lower() for q in queries.captured_queries))
+        self.assertRedirects(self.client.get('/cases/material/F01/'),'/#material-F01',fetch_redirect_response=False)
+        self.assertEqual(self.client.get('/cases/18/').status_code,404)
+        self.assertEqual(self.client.get('/cases/material/missing/').status_code,404)
+
+    def test_guest_inactive_logout_and_no_file_endpoint(self):
+        self.client.post('/logout/')
+        for url in ('/','/cases/17/','/cases/material/F01/','/private/case-reading.body','/api/cases/'):
+            r=self.client.get(url);self.assertIn(r.status_code,(302,403));self.assertNotIn('가상 본문',r.content.decode())
+        self.assertEqual(self.client.get('/static/case-reading.body').status_code,404)
+        self.login();Member.objects.filter(pk=self.member.pk).update(active=False)
         self.assertEqual(self.client.get('/').status_code,302)
 
-    def test_body_date_and_shared_rule_search_connections(self):
-        from .models import ArticleCaseLink
-        first=self.case('가상 첫 연결 사건',2,overview='본문만의 검색어')
-        second=self.case('가상 둘째 연결 사건',3)
-        article=Article.objects.create(case=first,citation='가상 제998조 후보',review_description='공식 원문이 아닌 가상 설명',relevance='가상 관련성')
-        ArticleCaseLink.objects.create(article=article,case=second,relevance='두 번째 가상 연결')
-        Case.objects.filter(pk__in=[first.pk,second.pk]).update(state='published')
-        self.assertEqual([c.pk for c in self.client.get('/?q=2025.1.2').context['cases']],[first.pk])
-        self.assertEqual(self.client.get('/?q=2025.99.99').status_code,200)
-        self.assertEqual([c.pk for c in self.client.get('/?q=본문만의').context['cases']],[first.pk])
-        response=self.client.get('/?q=998');self.assertEqual([c.pk for c in response.context['cases']],[first.pk,second.pk])
-        self.assertContains(response,'가상 제998조 후보',count=1)
-        self.assertContains(response,'공식 원문이 아닌 가상 설명')
+    def test_admin_needs_active_staff_view_permission_and_mfa(self):
+        self.client.post('/logout/');self.client.force_login(self.editor)
+        self.assertEqual(self.client.get('/').status_code,302)
+        self.editor.user_permissions.add(Permission.objects.get(codename='view_case'))
+        self.assertEqual(self.client.get('/').status_code,302)
+        session=self.client.session;session['admin_mfa_until']=timezone.now().timestamp()+300;session.save()
+        self.assertContains(self.client.get('/'),'가상 본문')
+        session=self.client.session;session['admin_mfa_until']=0;session.save()
+        self.assertEqual(self.client.get('/cases/material/F01/').status_code,302)
 
-    def test_month_range_search_keeps_original_period_and_no_fake_day(self):
-        case=Case.objects.create(title='가상 월 구간',topic='가상',author=self.editor,state='published',occurred_precision='period',occurred_year=2001,occurred_month=4,period_description='2001.4~6')
-        for url in ('/?q=2001.6','/?from=2001-06-15&to=2001-06-20'):
-            self.assertContains(self.client.get(url),'2001.4~6')
-        case.refresh_from_db();self.assertIsNone(case.occurred_on);self.assertIsNone(case.occurred_until)
+    def test_demo_malformed_missing_and_checkout_paths(self):
+        with override_settings(DEV=True,APP_MODE='development'):
+            self.assertEqual(self.client.get('/').status_code,403)
+        self.path.write_text('{bad')
+        self.assertEqual(self.client.get('/').status_code,503)
+        self.assertNotContains(self.client.get('/'),'bad',status_code=503)
+        self.path.unlink()
+        self.assertContains(self.client.get('/'),'본문 파일이 아직 배치되지 않았습니다')
+        with override_settings(BASE_DIR=Path(self.directory.name)):
+            self.write()
+            with self.assertRaises(ReadingUnavailable):load_reading()
+
+    def test_long_text_multiple_rules_fallback_and_no_truncation(self):
+        e=self.body['entries'][0];e['overview']='가상 긴 본문 '*1000+'가상 끝표시'
+        e['rules'].append(dict(e['rules'][0],citation='가상 제998조'))
+        second=self.entry('F02');second['rules']=[];self.body['entries'].append(second);self.write()
+        r=self.client.get('/');self.assertContains(r,'가상 끝표시');self.assertContains(r,'가상 제998조');self.assertContains(r,'관련 규정 추가 확인 필요')
