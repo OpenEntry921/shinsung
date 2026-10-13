@@ -1,12 +1,7 @@
 {% extends 'portal/base.html' %}
 {% block content %}
-<div class="eyebrow">RECORD & CONTEXT</div><h1>사건과 자료를 함께 읽기</h1>
-<p>자료 번호는 열람용 식별자이며 재판기관의 공식 사건번호가 아닙니다. 사실·주장·검토 의견과 공식 판단을 구분해 읽습니다.</p>
-{% if reading %}
-<p class="notice">출처: {{ reading.source_title }} · {{ reading.source_filename }}<br>문서 기준일 {{ reading.basis_on }} · 내부 검토 문서에서 필요한 내용을 편집했습니다. 원자료 대조 완료를 뜻하지 않습니다. 이후 상고 접수·확정·집행 여부는 추가 확인이 필요합니다.</p>
-<p class="eyebrow">오래된 사건부터 · 월·연도·기간 표현을 보존합니다. 같은 기간 안의 정확한 선후관계는 확인되지 않을 수 있습니다.</p>
-{% for entry in reading.dated_entries %}{% include 'portal/fixed_case_entry.html' %}{% endfor %}
-{% if reading.uncertain_entries %}<h2>순서를 확정할 수 없는 사건</h2>{% for entry in reading.uncertain_entries %}{% include 'portal/fixed_case_entry.html' %}{% endfor %}{% endif %}
-{% elif reading_error %}<p>보호된 본문 파일을 확인할 수 없습니다. 관리자에게 문의하세요.</p>
-{% else %}<p>보호된 본문 파일이 아직 배치되지 않았습니다. 관리자에게 문의하세요.</p>{% endif %}
+<style>
+.direct-case{margin:48px 0;padding:32px 0;border-top:1px solid #d9e1db;overflow-wrap:anywhere;min-width:0}.direct-case h2{line-height:1.5}.reading-area{margin:28px 0;padding:20px 0;border-top:1px solid #d9e1db;overflow-wrap:anywhere;min-width:0}.reading-area h3{font-size:24px;line-height:1.5}.reading-area h4{margin:24px 0 8px}.reading-excerpt{margin:24px 0}.reading-area p{line-height:1.9}.uncertain-heading{margin-top:64px}@media(max-width:600px){.reading-area h3{font-size:21px}.direct-case{margin:32px 0;padding:24px 0}}
+</style>
+{% include 'portal/direct_case_reading.html' %}
 {% endblock %}
