@@ -56,3 +56,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
 FILE_UPLOAD_PERMISSIONS = 0o600
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o700
 AUTH_PASSWORD_VALIDATORS = [{'NAME':'django.contrib.auth.password_validation.MinimumLengthValidator'},{'NAME':'django.contrib.auth.password_validation.CommonPasswordValidator'}]
+
+# Ciphertext is a server-only deployment asset; the decryption key is a runtime secret.
+CASE_READING_ENCRYPTED_PATH = BASE_DIR/'server_materials/case-reading.enc'
+CASE_READING_PRIVATE_KEY = os.environ.get('CASE_READING_PRIVATE_KEY', '')

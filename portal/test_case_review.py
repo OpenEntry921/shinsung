@@ -14,7 +14,7 @@ from .models import *
 from .memo_import import extract_candidates,convert_candidate
 from .case_services import publication_errors
 
-@override_settings(DEV=True,APP_MODE='development',SECURE_SSL_REDIRECT=False,SESSION_COOKIE_SECURE=False)
+@override_settings(CASE_READING_ENCRYPTED_PATH=Path('/nonexistent-fictitious-reading.enc'),DEV=True,APP_MODE='development',SECURE_SSL_REDIRECT=False,SESSION_COOKIE_SECURE=False)
 class CaseReviewTests(TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(prefix='shinsung-fictitious-review-')
@@ -130,7 +130,7 @@ class CaseReviewTests(TestCase):
     def test_requests_prefill_case_and_remain_private(self):
         self.publish();self.login_member();response=self.client.get(f'/requests/?case={self.case.pk}');self.assertEqual(response.context['form'].initial['case'],self.case)
         self.client.post('/requests/',{'kind':'response','case':self.case.pk,'body':'가상 비공개 반론'})
-        self.assertContains(self.client.get('/requests/'),'가상 비공개 반론');self.assertNotContains(self.client.get('/'),'가상 비공개 반론')
+        self.assertContains(self.client.get('/requests/'),'가상 비공개 반론');self.assertNotContains(self.client.get('/'),'가상 비공개 반론',status_code=503)
     def test_import_is_blocked_in_development(self):
         memo=self.memo()
         with self.assertRaises(ValidationError):extract_candidates(memo,self.editor)
@@ -170,7 +170,7 @@ class CaseReviewTests(TestCase):
         memo=self.memo();CaseEvidence.objects.create(case=self.case,document=memo,locator='문단 1')
         unsafe=self.doc(redaction_checked=False,state='draft')
         self.publish();self.login_member();response=self.client.get('/')
-        self.assertNotContains(response,memo.title);self.assertNotContains(response,'synthetic-memo.docx');self.assertEqual(self.client.get(f'/documents/{unsafe.pk}/reading/').status_code,403)
+        self.assertNotContains(response,memo.title,status_code=503);self.assertNotContains(response,'synthetic-memo.docx',status_code=503);self.assertEqual(self.client.get(f'/documents/{unsafe.pk}/reading/').status_code,403)
     def test_editor_cannot_publish_without_independent_approver(self):
         self.login_staff(permissions=['view_case','change_case','publish_case'])
         from .admin import CaseForm

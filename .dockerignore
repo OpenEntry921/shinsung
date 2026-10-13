@@ -14,3 +14,10 @@ private-materials
 **/*.review.json
 
 **/case-reading.body
+
+# Keys and transfer copies must never enter source or build artifacts.
+**/*.pem
+**/*.der
+**/*.body.gz*
+**/*private-key*
+**/*.b64
