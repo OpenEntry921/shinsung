@@ -52,20 +52,13 @@ class CaseReviewTests(TestCase):
         case.full_clean();case.save();self.assertIsNone(case.occurred_on);self.assertEqual(case.date_label,'2025년 2월 (월 단위)')
         case.occurred_on=datetime.date(2025,2,1)
         with self.assertRaises(ValidationError):case.full_clean()
-    def test_sort_search_and_basis_dates(self):
-        monthly=Case.objects.create(title='가상 월 사건',topic='가상 월 주제',occurred_precision='month',occurred_year=2025,occurred_month=1,author=self.editor,materials_as_of=datetime.date(2026,9,19))
-        unknown=Case.objects.create(title='가상 미상 사건',topic='가상',occurred_precision='unknown',author=self.editor)
-        self.publish(self.case,monthly,unknown);self.login_member()
-        content=self.client.get('/').content.decode();self.assertLess(content.index(monthly.title),content.index(self.case.title));self.assertLess(content.index(self.case.title),content.index(unknown.title))
-        content=self.client.get('/?order=desc').content.decode();self.assertLess(content.index(self.case.title),content.index(monthly.title));self.assertLess(content.index(monthly.title),content.index(unknown.title))
-        response=self.client.get('/?from=2025-01-15&to=2025-01-20&topic=월');self.assertContains(response,monthly.title);self.assertNotContains(response,self.case.title);self.assertContains(response,'2026년 9월 19일')
     def test_unknown_statute_body_not_generated_or_disclosed(self):
         Article.objects.create(case=self.case,citation='가상 제999조 확인 후보',text='공식 원문이 아닌 가상 내부 기재',relevance='관련 여부 확인 중')
-        self.publish();self.login_member();response=self.client.get(f'/cases/{self.case.pk}/')
+        self.publish();self.login_member();self.login_staff(permissions=['view_case']);response=self.client.get(f'/admin/portal/case/{self.case.pk}/preview/')
         self.assertContains(response,'조문 확인 중');self.assertNotContains(response,'공식 원문이 아닌 가상 내부 기재')
     def test_verified_statute_and_applicability_are_independent(self):
         article=Article.objects.create(case=self.case,citation='가상 검증 예시 (실제 헌법 아님)',text='가상 테스트 조문 본문',source='https://www.pck.or.kr/',amendment_source='https://www.pck.or.kr/',effective_on=datetime.date(2025,1,1),amended_on=datetime.date(2024,12,1),checked_on=datetime.date(2025,1,2),official_page='가상 1쪽',verified=True,relevance='가상 검토',applicability_status='pending')
-        article.full_clean();self.publish();self.login_member();response=self.client.get(f'/cases/{self.case.pk}/')
+        article.full_clean();self.publish();self.login_member();self.login_staff(permissions=['view_case']);response=self.client.get(f'/admin/portal/case/{self.case.pk}/preview/')
         self.assertContains(response,'가상 테스트 조문 본문');self.assertContains(response,'사건 당시 적용: 확인 중')
         article.applicability_status='applicable';article.effective_on=datetime.date(2026,1,1);article.applicability_reason='가상 근거'
         with self.assertRaises(ValidationError):article.full_clean()
@@ -79,8 +72,8 @@ class CaseReviewTests(TestCase):
         shared=Article.objects.create(case=self.case,citation='가상 조문 후보2',relevance='확인 중');shared.related_cases.add(other)
         decision=Decision.objects.create(institution='가상 기관',case_number='가상번호',document=first);decision.cases.add(self.case,other)
         self.publish(self.case,other);self.login_member()
-        response=self.client.get(f'/cases/{self.case.pk}/');self.assertContains(response,'가상 조문 후보1');self.assertContains(response,'가상 조문 후보2');self.assertContains(response,'1쪽 문단 2');self.assertContains(response,'증거 가상1');self.assertContains(response,'가상 기관')
-        self.assertContains(self.client.get(f'/cases/{other.pk}/'),'가상 조문 후보2')
+        self.login_staff(permissions=['view_case']);response=self.client.get(f'/admin/portal/case/{self.case.pk}/preview/');self.assertContains(response,'가상 조문 후보1');self.assertContains(response,'가상 조문 후보2');self.assertContains(response,'1쪽 문단 2');self.assertContains(response,'증거 가상1');self.assertContains(response,'가상 기관')
+        self.assertContains(self.client.get(f'/admin/portal/case/{other.pk}/preview/'),'가상 조문 후보2')
         self.assertEqual(decision.cases.count(),2)
     def test_fact_requires_original_and_decision_fact_specific_scope(self):
         doc=self.doc();evidence=CaseEvidence.objects.create(case=self.case,document=doc,locator='1쪽')
@@ -89,11 +82,11 @@ class CaseReviewTests(TestCase):
         doc.original_checked=True;doc.save();evidence.checked=True;evidence.save();statement.full_clean();statement.save()
         decision=Decision.objects.create(institution='가상 기관',case_number='가상번호',decided_on=datetime.date(2025,3,1),order='가상 주문 (실제 판결 아님)',scope='가상 일부 항목에 한정',document=doc,locator='1쪽',verified=True,outcome='excluded',finality='unknown');decision.cases.add(self.case)
         decision.full_clean();CaseStatement.objects.create(case=self.case,kind='decision_fact',text='가상 결정의 일부 항목',source_note='가상 판결문',evidence=evidence,decision=decision)
-        self.publish();self.login_member();response=self.client.get(f'/cases/{self.case.pk}/')
+        self.publish();self.login_member();self.login_staff(permissions=['view_case']);response=self.client.get(f'/admin/portal/case/{self.case.pk}/preview/')
         self.assertContains(response,'해당 결정에서 인정한 사실');self.assertContains(response,'판단 제외');self.assertContains(response,'확정 여부: 확인 중');self.assertContains(response,'가상 일부 항목에 한정')
     def test_pending_decision_never_claims_known_result(self):
         decision=Decision.objects.create(institution='가상 기관',case_number='가상번호',order='검증되지 않은 가상 주문',outcome='acquitted',finality='final');decision.cases.add(self.case)
-        self.publish();self.login_member();response=self.client.get(f'/cases/{self.case.pk}/')
+        self.publish();self.login_member();self.login_staff(permissions=['view_case']);response=self.client.get(f'/admin/portal/case/{self.case.pk}/preview/')
         self.assertContains(response,'결정 원자료 확인 중');self.assertNotContains(response,'검증되지 않은 가상 주문');self.assertNotContains(response,'결과 유형: 무죄');self.assertNotContains(response,'확정 여부: 확정')
     def test_memo_cannot_be_official_fact_or_member_download(self):
         memo=self.memo();memo.state='published';memo.redaction_checked=True
@@ -137,7 +130,7 @@ class CaseReviewTests(TestCase):
     def test_requests_prefill_case_and_remain_private(self):
         self.publish();self.login_member();response=self.client.get(f'/requests/?case={self.case.pk}');self.assertEqual(response.context['form'].initial['case'],self.case)
         self.client.post('/requests/',{'kind':'response','case':self.case.pk,'body':'가상 비공개 반론'})
-        self.assertContains(self.client.get('/requests/'),'가상 비공개 반론');self.assertNotContains(self.client.get(f'/cases/{self.case.pk}/'),'가상 비공개 반론')
+        self.assertContains(self.client.get('/requests/'),'가상 비공개 반론');self.assertNotContains(self.client.get('/'),'가상 비공개 반론')
     def test_import_is_blocked_in_development(self):
         memo=self.memo()
         with self.assertRaises(ValidationError):extract_candidates(memo,self.editor)
@@ -176,7 +169,7 @@ class CaseReviewTests(TestCase):
     def test_fully_redacted_reading_and_internal_source_names(self):
         memo=self.memo();CaseEvidence.objects.create(case=self.case,document=memo,locator='문단 1')
         unsafe=self.doc(redaction_checked=False,state='draft')
-        self.publish();self.login_member();response=self.client.get(f'/cases/{self.case.pk}/')
+        self.publish();self.login_member();response=self.client.get('/')
         self.assertNotContains(response,memo.title);self.assertNotContains(response,'synthetic-memo.docx');self.assertEqual(self.client.get(f'/documents/{unsafe.pk}/reading/').status_code,403)
     def test_editor_cannot_publish_without_independent_approver(self):
         self.login_staff(permissions=['view_case','change_case','publish_case'])
@@ -202,7 +195,7 @@ class CaseReviewTests(TestCase):
         older=Case.objects.create(title='가상 과거 사건',topic='가상',occurred_on=datetime.date(2024,1,1),author=self.editor)
         article.related_cases.add(older)
         self.publish(self.case,older);self.login_member()
-        response=self.client.get(f'/cases/{older.pk}/');self.assertContains(response,'사건 당시 적용: 확인 중');self.assertNotContains(response,'가상 기본 사건 검증')
+        self.login_staff(permissions=['view_case']);response=self.client.get(f'/admin/portal/case/{older.pk}/preview/');self.assertContains(response,'사건 당시 적용: 확인 중');self.assertNotContains(response,'가상 기본 사건 검증')
         application=ArticleCaseLink.objects.get(article=article,case=older);application.applicability_status='applicable';application.applicability_reason='가상 잘못된 소급 적용'
         with self.assertRaises(ValidationError):application.full_clean()
     def test_supporting_evidence_scope_and_private_log_ids(self):

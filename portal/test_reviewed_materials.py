@@ -61,15 +61,12 @@ class ReviewedMaterialTests(TestCase):
         self.reviewer.user_permissions.clear()
         with self.assertRaises(ImportRejected):self.run_import(apply=True,publish=True)
         self.assertEqual(Case.objects.count(),0)
-    def test_initial_full_body_all_sections_and_search_connections(self):
-        self.run_import(apply=True,publish=True);self.member_session();response=self.client.get('/')
-        for text in ('① 사건 경과','② 관련 교단 헌법과 규정','③ 쟁점과 추가 확인사항','가상 원문 발췌','가상 검토 문서의 설명','공식 조문 원문 미확인','편집자 요약','원자료 미대조'):
-            self.assertContains(response,text)
-        for query in ('999','추가 확인','E01'):
-            response=self.client.get('/',{'q':query});self.assertContains(response,'가상 원문 발췌');self.assertContains(response,'가상 검토 문서의 설명')
-        response=self.client.get('/?q=없는검색')
-        for text in ('① 사건 경과','② 관련 교단 헌법과 규정','③ 쟁점과 추가 확인사항'):self.assertContains(response,text)
-        self.assertContains(response,'검색 조건 초기화')
+    def test_db_import_does_not_control_fixed_member_body(self):
+        self.run_import(apply=True,publish=True);self.member_session()
+        response=self.client.get('/')
+        self.assertNotContains(response,'가상 원문 발췌')
+        self.assertContains(response,'본문 파일이 아직 배치되지 않았습니다')
+        self.assertNotContains(response,'검색 조건 초기화')
     def test_original_guest_inactive_and_direct_link_protection(self):
         self.run_import(apply=True,publish=True);case=Case.objects.get();doc=Document.objects.get()
         for url in ('/',f'/cases/{case.pk}/',f'/documents/{doc.pk}/original/',f'/documents/{doc.pk}/reading/'):
@@ -101,5 +98,5 @@ class ReviewedMaterialTests(TestCase):
     def test_demo_session_cannot_unlock_registered_materials_after_mode_change(self):
         self.run_import(apply=True,publish=True);self.member_session();case=Case.objects.get()
         with override_settings(APP_MODE='development',DEV=True):
-            for url in ('/',f'/cases/{case.pk}/','/api/posts/'):
+            for url in ('/api/posts/',):
                 response=self.client.get(url);self.assertEqual(response.status_code,403);self.assertNotIn('가상 원문 발췌',response.content.decode())

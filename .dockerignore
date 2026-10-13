@@ -12,3 +12,5 @@ runtime
 private-materials
 
 **/*.review.json
+
+**/case-reading.body
