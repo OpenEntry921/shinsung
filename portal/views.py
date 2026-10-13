@@ -12,48 +12,38 @@ from django.utils import timezone
 from django.contrib.auth.hashers import make_password
 from django.forms import ModelForm
 from .models import *
-from .security import phone, digest, limit, send_sms, valid_totp, keyed
+from .security import phone, digest, limit, valid_totp, keyed
 from .roster import parse
 
-GENERIC='입력 내용이 명부와 일치하고 발송 가능한 경우 인증번호를 보냅니다. 인증이 어려우면 관리자에게 문의하세요.'
+GENERIC='입력 내용을 확인할 수 없습니다. 명부 오류·공용 번호·접속 곤란은 운영 관리자에게 문의하세요.'
 def health(request): return JsonResponse({'status':'ok'})
 def policy(request): return render(request,'portal/policy.html',{'operator_name':settings.OPERATOR_NAME,'operator_contact':settings.OPERATOR_CONTACT})
 def login(request):
-    message=''; devcode=''
+    message=''
     if request.method=='POST':
         message=GENERIC
-        name=request.POST.get('name','').strip()[:80]; number=phone(request.POST.get('phone',''))[:20]
-        request.session['challenge_id']=str(uuid.uuid4())
+        name=request.POST.get('name','').strip()[:80]
+        number=phone(request.POST.get('phone',''))[:20]
         allowed=limit('ip:'+request.META.get('REMOTE_ADDR',''),20,3600)
         if allowed: allowed=limit('phone-hour:'+number,5,3600)
-        if allowed: allowed=limit('phone-minute:'+number,1,60)
-        members=Member.objects.filter(name=name,phone=number,active=True)
-        member=members.first() if members.count()==1 and Member.objects.filter(phone=number,active=True).count()==1 else None
-        code=f'{secrets.randbelow(1000000):06d}'
-        sent=allowed and member and send_sms(member,code)
-        if allowed:
-            Challenge.objects.create(id=request.session['challenge_id'],member=member if sent else None,digest=digest(request.session['challenge_id'],code),expires_at=timezone.now()+datetime.timedelta(minutes=5),version=member.session_version if sent else 1)
-        if sent and settings.DEV and member.synthetic: devcode=code
-    return render(request,'portal/login.html',{'message':message,'devcode':devcode,'development':settings.DEV})
+        if allowed and name and number:
+            with transaction.atomic():
+                matches=Member.objects.select_for_update().filter(name=name,phone=number,active=True)
+                member=matches.first() if matches.count()==1 else None
+                if member and Member.objects.filter(phone=number,active=True).count()==1:
+                    request.session.flush()
+                    rotate_token(request)
+                    request.session['member_id']=str(member.pk)
+                    request.session['member_version']=member.session_version
+                    request.session['member_auth']='roster'
+                    request.session.set_expiry(3600)
+                    return redirect('/')
+    return render(request,'portal/login.html',{'message':message})
 
 @require_POST
 def otp(request):
-    error='인증번호를 확인할 수 없습니다. 만료되었거나 사용된 번호일 수 있습니다.'
-    with transaction.atomic():
-        challenge=Challenge.objects.select_for_update().filter(pk=request.session.get('challenge_id')).first() if request.session.get('challenge_id') else None
-        allowed=limit('verify:'+request.META.get('REMOTE_ADDR',''),30,3600)
-        if challenge and allowed and not challenge.used and challenge.attempts<5 and challenge.expires_at>timezone.now():
-            challenge.attempts+=1
-            valid=hmac.compare_digest(challenge.digest,digest(str(challenge.id),request.POST.get('code','')))
-            member=challenge.member
-            if valid and member and member.active and member.session_version==challenge.version and Member.objects.filter(phone=member.phone,active=True).count()==1 and (not settings.DEV or member.synthetic):
-                challenge.used=True; challenge.save(); request.session.flush(); rotate_token(request)
-                request.session['member_id']=str(member.id); request.session['member_version']=member.session_version
-                request.session['member_auth']='sms'
-                request.session.set_expiry(3600)
-                return redirect('/')
-            challenge.save()
-    return render(request,'portal/login.html',{'message':error,'development':settings.DEV},status=400)
+    # Retain old URL compatibility without accepting old SMS/development codes.
+    return redirect('/login/')
 
 @require_POST
 def logout(request):

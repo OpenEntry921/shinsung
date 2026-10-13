@@ -22,7 +22,7 @@ class PortalTests(TestCase):
     def member_login(self,member=None,client=None):
         production=override_settings(DEV=False,APP_MODE="production");production.enable();self.addCleanup(production.disable)
         member=member or self.member; client=client or self.client
-        session=client.session; session['member_id']=str(member.pk); session['member_version']=member.session_version; session.save()
+        session=client.session; session['member_auth']='roster';session['member_id']=str(member.pk); session['member_version']=member.session_version; session.save()
     def staff_login(self):
         self.client.force_login(self.staff); session=self.client.session; session['admin_mfa_until']=timezone.now().timestamp()+300; session.save()
     def challenge(self,member=None,**kwargs):
@@ -45,43 +45,49 @@ class PortalTests(TestCase):
         ch=self.challenge(); self.member_login();self.member.phone='01000000003';self.member.save()
         self.assertEqual(self.client.get('/').status_code,302)
         session=self.client.session;session['challenge_id']=str(ch.pk);session.save()
-        self.assertEqual(self.client.post('/otp/',{'code':'123456'}).status_code,400)
-    def test_otp_success_one_use_hashed(self):
-        ch=self.challenge();self.assertNotIn('123456',ch.digest)
-        self.assertEqual(self.client.post('/otp/',{'code':'123456'}).status_code,302)
-        self.assertEqual(self.client.get('/').status_code,403)  # Demo OTP cannot read actual excerpts.
-        session=self.client.session;session['challenge_id']=str(ch.pk);session.save()
-        self.assertEqual(self.client.post('/otp/',{'code':'123456'}).status_code,400)
-    def test_expired_otp(self):
-        ch=self.challenge();ch.expires_at=timezone.now()-datetime.timedelta(seconds=1);ch.save()
-        self.assertEqual(self.client.post('/otp/',{'code':'123456'}).status_code,400)
-    def test_otp_attempt_limit(self):
-        ch=self.challenge()
-        for _ in range(5):self.assertEqual(self.client.post('/otp/',{'code':'000000'}).status_code,400)
-        self.assertEqual(self.client.post('/otp/',{'code':'123456'}).status_code,400)
-        ch.refresh_from_db();self.assertEqual(ch.attempts,5)
-    def test_unknown_and_known_generic_response(self):
-        unknown=self.client.post('/login/',{'name':'존재하지않는가상교인','phone':'01000000999'})
-        known=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
+        self.assertRedirects(self.client.post('/otp/',{'code':'123456'}),'/login/',fetch_redirect_response=False)
+    def test_roster_login_without_sms(self):
+        with patch('portal.security.requests.post') as sender:
+            response=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
+        sender.assert_not_called()
+        self.assertRedirects(response,'/',fetch_redirect_response=False)
+        self.assertEqual(self.client.session['member_auth'],'roster')
+        self.assertEqual(Challenge.objects.count(),0)
+    def test_incorrect_name_or_phone_has_no_session(self):
+        response=self.client.post('/login/',{'name':'존재하지않는가상교인','phone':self.member.phone})
         from .views import GENERIC
-        self.assertContains(unknown,GENERIC);self.assertContains(known,GENERIC)
-        self.assertIsNone(Challenge.objects.order_by('expires_at').first().member)
-    def test_resend_limit(self):
-        with patch('portal.views.send_sms',return_value=True) as sender:
-            for _ in range(2):self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
-            self.assertEqual(sender.call_count,1)
+        self.assertContains(response,GENERIC);self.assertNotIn('member_id',self.client.session)
+    def test_legacy_otp_cannot_create_session(self):
+        self.challenge()
+        self.assertRedirects(self.client.post('/otp/',{'code':'123456'}),'/login/',fetch_redirect_response=False)
+        self.assertNotIn('member_id',self.client.session)
+    def test_login_request_limit(self):
+        with patch('portal.views.limit',return_value=False):
+            response=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
+        from .views import GENERIC
+        self.assertContains(response,GENERIC);self.assertNotIn('member_id',self.client.session)
+    def test_unknown_and_inactive_generic_response(self):
+        unknown=self.client.post('/login/',{'name':'존재하지않는가상교인','phone':'01000000999'})
+        self.member.active=False;self.member.save()
+        inactive=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
+        from .views import GENERIC
+        self.assertContains(unknown,GENERIC);self.assertContains(inactive,GENERIC)
+        self.assertNotIn('member_id',self.client.session)
+    def test_phone_normalization(self):
+        response=self.client.post('/login/',{'name':' '+self.member.name+' ','phone':'010-0000-0001'})
+        self.assertRedirects(response,'/',fetch_redirect_response=False)
     def test_shared_phone_denied(self):
         self.other.phone=self.member.phone;self.other.save()
-        with patch('portal.views.send_sms') as sender:
-            self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone});sender.assert_not_called()
-        self.assertIsNone(Challenge.objects.latest('expires_at').member)
-    @override_settings(DEV=False,SMS_API_KEY='',SMS_API_SECRET='',SMS_SENDER='')
-    def test_no_sms_no_auth(self):
         response=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
-        self.assertNotContains(response,'가상 발송 인증번호');self.assertIsNone(Challenge.objects.latest('expires_at').member)
-    def test_development_real_member_denied(self):
-        self.member.synthetic=False;self.member.save();self.challenge()
-        self.assertEqual(self.client.post('/otp/',{'code':'123456'}).status_code,400)
+        from .views import GENERIC
+        self.assertContains(response,GENERIC);self.assertNotIn('member_id',self.client.session)
+    @override_settings(DEV=False,SMS_API_KEY='',SMS_API_SECRET='',SMS_SENDER='')
+    def test_no_sms_roster_login(self):
+        self.assertRedirects(self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone}),'/',fetch_redirect_response=False)
+        self.assertEqual(self.client.session['member_id'],str(self.member.pk))
+    def test_development_real_member_uses_roster(self):
+        self.member.synthetic=False;self.member.save()
+        self.assertRedirects(self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone}),'/',fetch_redirect_response=False)
     def test_author_spoof_ignored(self):
         self.member_login()
         self.client.post('/posts/new/',{'title':'가상 글','body':'가상 본문','member':str(self.other.pk),'author_name':'위조 작성자'})
@@ -208,7 +214,7 @@ class PortalTests(TestCase):
         self.assertEqual(response.status_code,200);self.member.refresh_from_db();self.assertEqual(self.member.phone,'01000000008')
     def test_unknown_otp_no_account_created(self):
         before=Member.objects.count();self.client.post('/login/',{'name':'가상미등록','phone':'01000000999'})
-        self.assertEqual(self.client.post('/otp/',{'code':'123456'}).status_code,400);self.assertEqual(Member.objects.count(),before)
+        self.assertRedirects(self.client.post('/otp/',{'code':'123456'}),'/login/',fetch_redirect_response=False);self.assertEqual(Member.objects.count(),before)
     @override_settings(ADMIN_MFA_SECRETS={'test-editor':'JBSWY3DPEHPK3PXP'})
     def test_individual_mfa_and_replay(self):
         import base64,hashlib,hmac,struct,time

@@ -13,44 +13,33 @@ from django.test import SimpleTestCase, TestCase, override_settings
 
 from .models import Challenge, Member
 
-NOTICE = '가상 데이터 시연 환경입니다. 실제 문자는 발송하지 않으며, 실제 교인 명부를 등록하지 마세요.'
-
-
-@override_settings(DEV=True, SECURE_SSL_REDIRECT=False, SMS_API_KEY='', SMS_API_SECRET='', SMS_SENDER='')
+@override_settings(DEV=True,SECURE_SSL_REDIRECT=False,SMS_API_KEY='',SMS_API_SECRET='',SMS_SENDER='')
 class DemoLoginTests(TestCase):
-    def test_development_notice_and_synthetic_code_without_sms(self):
-        call_command('seed_demo', verbosity=0)
-        self.assertContains(self.client.get('/login/'), NOTICE)
+    def test_existing_synthetic_member_uses_roster_without_sms(self):
+        call_command('seed_demo',verbosity=0)
         with patch('portal.security.requests.post') as sender:
-            response = self.client.post('/login/', {'name': '가상교인', 'phone': '01000000000'})
+            response=self.client.post('/login/',{'name':'가상교인','phone':'01000000000'})
         sender.assert_not_called()
-        self.assertContains(response, NOTICE)
-        self.assertContains(response, '가상 발송 인증번호')
-        self.assertIsNotNone(Challenge.objects.get().member)
-
-    def test_non_synthetic_record_never_gets_development_code(self):
-        # A fabricated fixture with synthetic=False represents a roster record.
-        Member.objects.create(name='가상테스트명부', phone='01000000009', synthetic=False)
-        response = self.client.post('/login/', {'name': '가상테스트명부', 'phone': '01000000009'})
-        self.assertNotContains(response, '가상 발송 인증번호')
-        self.assertIsNone(Challenge.objects.get().member)
-
-    def test_notice_remains_on_failed_code_entry(self):
-        self.assertContains(self.client.post('/otp/', {'code': '000000'}), NOTICE, status_code=400)
-
+        self.assertRedirects(response,'/',fetch_redirect_response=False)
+        self.assertEqual(self.client.get('/').status_code,200)
+        self.assertEqual(Challenge.objects.count(),0)
+    def test_active_non_synthetic_roster_member_can_login(self):
+        member=Member.objects.create(name='가상테스트명부',phone='01000000009',synthetic=False)
+        self.assertRedirects(self.client.post('/login/',{'name':member.name,'phone':member.phone}),'/',fetch_redirect_response=False)
+        self.assertEqual(self.client.session['member_id'],str(member.pk))
+    def test_legacy_code_url_returns_to_login(self):
+        response=self.client.post('/otp/',{'code':'000000'},follow=True)
+        self.assertEqual(response.status_code,200)
+        self.assertFalse('가상 발송 인증번호'.encode() in response.content)
+        self.assertNotIn('member_id',self.client.session)
     @override_settings(DEV=False)
-    def test_production_no_seed_no_notice_no_code_or_auth_without_sms(self):
-        with self.assertRaises(CommandError):
-            call_command('seed_demo')
-        self.assertEqual(Member.objects.count(), 0)
-        Member.objects.create(name='가상교인', phone='01000000000', synthetic=True)
-        self.assertNotContains(self.client.get('/login/'), NOTICE)
-        response = self.client.post('/login/', {'name': '가상교인', 'phone': '01000000000'})
-        self.assertNotContains(response, NOTICE)
-        self.assertNotContains(response, '가상 발송 인증번호')
-        self.assertIsNone(Challenge.objects.get().member)
-        self.assertEqual(self.client.post('/otp/', {'code': '000000'}).status_code, 400)
-        self.assertNotIn('member_id', self.client.session)
+    def test_production_no_seed_but_existing_roster_login_without_sms(self):
+        with self.assertRaises(CommandError):call_command('seed_demo')
+        self.assertEqual(Member.objects.count(),0)
+        member=Member.objects.create(name='가상교인',phone='01000000000',synthetic=True)
+        self.assertRedirects(self.client.post('/login/',{'name':member.name,'phone':member.phone}),'/',fetch_redirect_response=False)
+        self.assertEqual(self.client.session['member_id'],str(member.pk))
+        self.assertEqual(Challenge.objects.count(),0)
 
 
 class DevelopmentStartupTests(SimpleTestCase):
