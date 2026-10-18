@@ -1,0 +1,17 @@
+<section class="discussion-area" id="discussion-{{ group.key }}" aria-labelledby="discussion-heading-{{ group.key }}">
+<h3 id="discussion-heading-{{ group.key }}">⑤ 성도님의 생각</h3>
+<p>이 사건을 어떻게 보셨습니까? 다른 사실이나 해석, 앞으로의 해결 방향을 자유롭게 남겨주십시오.</p>
+<p><a href="/posts/new/?reading_key={{ group.key }}">자유 게시판에서 이 사건에 관한 글 작성</a> · <a href="/requests/?reading_key={{ group.key }}&amp;kind=response">비공개 반론·자료 제출</a></p>
+{% if group.error %}<div id="comment-error-{{ group.key }}" class="notice" role="alert"><h4>입력 내용을 확인하세요</h4>
+<form method="post" action="{% if group.error.pk %}{% url 'comment_change' group.key group.error.pk %}{% else %}{% url 'comment_create' group.key %}{% endif %}#discussion-{{ group.key }}">{% csrf_token %}<input type="hidden" name="action" value="{{ group.error.action }}">{% if group.error.parent %}<input type="hidden" name="parent" value="{{ group.error.parent }}">{% endif %}{% if group.error.action == 'delete' %}{{ group.error.form.non_field_errors }}{% else %}{{ group.error.form.as_p }}{% endif %}<button>다시 제출</button></form></div>{% endif %}
+{% for node in group.roots %}
+{% include 'portal/comment_item.html' with node=node reply=False %}
+<div class="comment-replies">{% for child in node.replies %}{% include 'portal/comment_item.html' with node=child reply=True %}{% endfor %}</div>
+{% if identity_verified and not node.item.hidden and not node.item.deleted_at %}
+<form class="reply-form" method="post" action="{% url 'comment_create' group.key %}#discussion-{{ group.key }}">{% csrf_token %}<input type="hidden" name="parent" value="{{ node.item.pk }}"><label for="reply-{{ node.item.pk }}">위 의견에 답글 (한 단계)</label><textarea id="reply-{{ node.item.pk }}" name="body" maxlength="10000" required rows="3"></textarea><button>답글 등록</button></form>
+{% endif %}
+{% empty %}<p>아직 등록된 의견이 없습니다. 첫 의견을 남겨주세요.</p>{% endfor %}
+{% if identity_verified %}<form method="post" action="{% url 'comment_create' group.key %}#discussion-{{ group.key }}">{% csrf_token %}<p>교인 전용 게시판에 등록된 실명으로 표시됩니다.</p>{{ group.form.as_p }}<button>의견 등록</button></form>
+{% elif request.member %}<p>이름·전화번호 일치 로그인은 본인 확인 완료가 아닙니다. 의견 작성은 관리자에게 별도 신원 확인을 받은 뒤 개인별 일회용 접속 수단을 사용해 주세요. <a href="/exception/">개인별 접속 수단 입력</a></p>
+{% else %}<p>관리자의 열람 권한으로는 교인 명의의 의견을 작성할 수 없습니다.</p>{% endif %}
+</section>

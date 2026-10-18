@@ -29,12 +29,13 @@ class DirectHTMLReadingTests(TestCase):
         self.assertEqual(html.count('class="reading-area"'),120)
         for i in range(1,31):
             self.assertIn(f'id="material-E{i:02}"',html)
-        for section in ('① 날짜','② 사건 내용','③ 관련 헌법 조문','④ 판결 설명 및 우리의 의견'):
+        for section in ('① 날짜','② 사건 내용','③ 관련 헌법 조문','④ 판단 관련 설명과 우리의 검토 의견'):
             self.assertEqual(html.count(section),30)
         for token in ('<script','<details','<input','<select'):
             if token=='<input':continue # Existing CSRF token is part of the logout menu.
             self.assertNotIn(token,html)
-        forbidden=('portal_case','portal_article','portal_document','portal_reviewedmaterialimport','portal_registeredmaterialcase','portal_decision')
+        # Match table identifiers exactly: portal_casecomment is not portal_case.
+        forbidden=tuple('\"'+name+'\"' for name in ('portal_case','portal_article','portal_document','portal_reviewedmaterialimport','portal_registeredmaterialcase','portal_decision'))
         self.assertFalse(any(any(t in q['sql'].lower() for t in forbidden) for q in queries.captured_queries))
         self.assertEqual(Post.objects.get().member_id,self.member.pk)
         self.assertIn('no-store',response['Cache-Control']);self.assertIn('private',response['Cache-Control'])
