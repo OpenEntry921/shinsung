@@ -2,6 +2,7 @@ import uuid
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from .reading_registry import READING_CHOICES, READING_KEYS
 
 def private_original_path(instance,filename):
     return f'originals/{uuid.uuid4().hex}{__import__("pathlib").Path(filename).suffix.lower()}'
@@ -202,6 +203,7 @@ class Document(models.Model):
     def __str__(self): return self.title
 
 class Post(models.Model):
+    reading_key = models.CharField("HTML 사건번호", max_length=3, choices=READING_CHOICES, blank=True)
     member = models.ForeignKey(Member,on_delete=models.PROTECT)
     author_name = models.CharField(max_length=80)
     title = models.CharField(max_length=200)
@@ -222,6 +224,10 @@ class Revision(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 class Request(models.Model):
+    reading_key = models.CharField("HTML 사건번호", max_length=3, choices=READING_CHOICES, blank=True)
+    comment = models.ForeignKey("CaseComment", on_delete=models.SET_NULL, null=True, blank=True)
+    public_excerpt = models.TextField("실제로 접수된 반론의 공개용 발췌 (개인정보 제거)", blank=True)
+    public_approved = models.BooleanField("접수 내용 대조·개인정보 검토 후 반론 공개 승인", default=False)
     KINDS = [('report','신고'),('correction','정정'),('response','반론·자료 제출'),('appeal','이의 제기')]
     member = models.ForeignKey(Member,on_delete=models.PROTECT)
     kind = models.CharField(max_length=20,choices=KINDS)
@@ -231,6 +237,12 @@ class Request(models.Model):
     response = models.TextField('관리자 답변·처리 사유',blank=True)
     resolved = models.BooleanField('처리 완료',default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        if self.comment_id and self.reading_key != self.comment.reading_key:
+            raise ValidationError('댓글과 같은 사건번호를 선택하세요.')
+        if self.public_approved and (self.kind != 'response' or not self.reading_key or not self.public_excerpt.strip()):
+            raise ValidationError('실제 반론 접수·사건번호·공개용 발췌가 필요합니다.')
 
 class RosterBatch(models.Model):
     id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
@@ -365,3 +377,31 @@ class RegisteredMaterialCase(models.Model):
     verification = models.CharField(max_length=20,default='memo_only',choices=[('memo_only','검토 문서 기재 · 원자료 미대조'),('matched','원자료 대조 완료')])
     class Meta:
         constraints=[models.UniqueConstraint(fields=['batch','key'],name='unique_reviewed_material_case')]
+
+
+class CaseComment(models.Model):
+    REASONS = [('privacy','개인정보 노출'),('abuse','욕설·위협'),('spam','반복 도배'),('attack','사건과 무관한 인신공격')]
+    reading_key = models.CharField('HTML 사건번호', max_length=3, choices=READING_CHOICES, db_index=True)
+    member = models.ForeignKey(Member, on_delete=models.PROTECT)
+    author_name = models.CharField('등록 실명', max_length=80)
+    author_label = models.CharField('비민감 구분 표기', max_length=40, blank=True)
+    body = models.TextField('의견', max_length=10000)
+    parent = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True, related_name='replies')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    edited = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    hidden = models.BooleanField(default=False)
+    moderation_reason = models.CharField('공개 조치 사유', max_length=20, choices=REASONS, blank=True)
+    moderation_note = models.TextField('관리자 전용 조치 근거', blank=True)
+    class Meta:
+        ordering = ['created_at', 'pk']
+        constraints = [models.CheckConstraint(condition=models.Q(reading_key__in=READING_KEYS), name='comment_known_reading_key')]
+    def clean(self):
+        if self.parent_id:
+            if self.pk == self.parent_id or self.parent.parent_id or self.parent.reading_key != self.reading_key:
+                raise ValidationError('같은 사건의 최상위 의견에만 답글을 쓸 수 있습니다.')
+        if self.hidden and (not self.moderation_reason or not self.moderation_note.strip()):
+            raise ValidationError('숨김에는 공개 분류와 관리자 전용 근거가 필요합니다.')
+    def __str__(self):
+        return f'{self.reading_key} · 의견 {self.pk}'

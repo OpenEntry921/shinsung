@@ -1,0 +1,11 @@
+<div class="comment-item" id="comment-{{ node.item.pk }}">
+{% if node.item.deleted_at %}<p>작성자가 삭제한 의견입니다.</p>
+{% elif node.item.hidden %}<p>관리자가 숨긴 의견입니다. 사유: {{ node.item.get_moderation_reason_display }}</p>
+{% else %}
+<p class="eyebrow">{{ node.item.author_name }}{% if node.item.author_label %} · {{ node.item.author_label }}{% endif %} · {{ node.item.created_at }}{% if node.item.edited %} · 수정됨 {{ node.item.updated_at }}{% endif %}</p><p>{{ node.item.body }}</p>
+{% if node.own and identity_verified %}
+<form class="comment-edit" method="post" action="{% url 'comment_change' group.key node.item.pk %}#discussion-{{ group.key }}">{% csrf_token %}<input type="hidden" name="action" value="edit"><label for="edit-{{ node.item.pk }}">내 {% if reply %}답글{% else %}의견{% endif %} 수정</label><textarea id="edit-{{ node.item.pk }}" name="body" maxlength="10000" required rows="3">{{ node.item.body }}</textarea><button>수정 저장</button></form>
+<form method="post" action="{% url 'comment_change' group.key node.item.pk %}#discussion-{{ group.key }}">{% csrf_token %}<input type="hidden" name="action" value="delete"><button>내 의견 삭제</button></form>
+{% endif %}{% endif %}
+<p><a href="/requests/?reading_key={{ group.key }}&amp;comment={{ node.item.pk }}&amp;kind=report">신고</a> · <a href="/requests/?reading_key={{ group.key }}&amp;comment={{ node.item.pk }}&amp;kind=correction">정정 요청·이의 제기</a></p>
+</div>

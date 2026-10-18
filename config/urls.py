@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from portal import views as v
+from portal import discussions as d
 from portal import material_views as m
 urlpatterns=[
  path('materials/import/',m.memo_import,name='memo_import'),path('materials/candidates/<int:pk>/convert/',m.candidate_convert),
@@ -11,5 +12,7 @@ urlpatterns=[
  path('documents/<int:pk>/<str:kind>/',v.documents),
  path('posts/',v.posts,name='posts'),path('posts/new/',v.post_edit,name='post_new'),
  path('posts/<int:pk>/',v.post_detail,name='post'),path('posts/<int:pk>/edit/',v.post_edit,name='post_edit'),path('posts/<int:pk>/delete/',v.post_delete,name='post_delete'),
+ path('comments/<slug:key>/',d.comment_write,name='comment_create'),
+ path('comments/<slug:key>/<int:pk>/',d.comment_write,name='comment_change'),
  path('requests/',v.requests_view,name='requests'),
 ]

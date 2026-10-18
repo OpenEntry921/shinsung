@@ -60,14 +60,16 @@ def admin_mfa(request):
     return render(request,'portal/mfa.html',{'error':error})
 
 def cases(request):
-    return render(request, 'portal/cases.html')
+    from .discussions import discussion_context
+    return render(request, 'portal/cases.html', discussion_context(request))
 
 
 def case_detail(request, pk=None, key=None):
     from django.http import Http404
     if pk is not None and 1 <= pk <= 30:
         key = f'E{pk:02}'
-    if key not in {f'E{i:02}' for i in range(1, 31)}:
+    from .reading_registry import READING_KEYS
+    if key not in READING_KEYS:
         raise Http404
     return redirect('/#material-' + key)
 
@@ -93,12 +95,14 @@ def post_detail(request,pk):
     post=get_object_or_404(Post,pk=pk,hidden=False,deleted_at=None)
     return render(request,'portal/post.html',{'post':post})
 class PostForm(ModelForm):
-    class Meta: model=Post; fields=['title','body','case']; labels={'title':'제목','body':'내용','case':'관련 사건'}
+    class Meta: model=Post; fields=['title','body','case','reading_key']; labels={'title':'제목','body':'내용','case':'관련 사건'}
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs); self.fields['case'].queryset=Case.objects.filter(state='published')
 def post_edit(request,pk=None):
     post=get_object_or_404(Post,pk=pk,member=request.member,hidden=False,deleted_at=None) if pk else None
-    form=PostForm(request.POST or None,instance=post)
+    from .reading_registry import READING_KEYS
+    selected=request.GET.get('reading_key','')
+    form=PostForm(request.POST or None,instance=post,initial={'reading_key':selected if selected in READING_KEYS else ''})
     if request.method=='POST' and form.is_valid():
         if not limit('post:'+str(request.member.pk),20,3600): return HttpResponse('작성 요청이 너무 많습니다.',status=429)
         obj=form.save(commit=False)
@@ -113,12 +117,19 @@ def post_delete(request,pk):
     post=get_object_or_404(Post,pk=pk,member=request.member,deleted_at=None)
     post.deleted_at=timezone.now(); post.save(); return redirect('posts')
 class RequestForm(ModelForm):
-    class Meta: model=Request; fields=['kind','case','post','body']; labels={'kind':'유형','case':'관련 사건','post':'관련 게시글','body':'내용'}
+    class Meta: model=Request; fields=['kind','case','post','reading_key','comment','body']; labels={'kind':'유형','case':'관련 사건','post':'관련 게시글','body':'내용'}
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs); self.fields['case'].queryset=Case.objects.filter(state='published'); self.fields['post'].queryset=Post.objects.filter(hidden=False,deleted_at=None)
+        self.fields['comment'].widget=__import__('django').forms.HiddenInput()
+        self.fields['comment'].queryset=CaseComment.objects.all()
 def requests_view(request):
     selected=Case.objects.filter(pk=request.GET.get('case'),state='published').first() if request.GET.get('case','').isdigit() else None
-    form=RequestForm(request.POST or None,initial={'case':selected})
+    from .reading_registry import READING_KEYS
+    key=request.GET.get('reading_key','')
+    key=key if key in READING_KEYS else ''
+    cid=request.GET.get('comment','')
+    comment=CaseComment.objects.filter(pk=int(cid),reading_key=key).first() if cid.isdigit() and len(cid)<19 else None
+    form=RequestForm(request.POST or None,initial={'case':selected,'reading_key':key,'comment':comment,'kind':request.GET.get('kind','correction')})
     if request.method=='POST' and form.is_valid():
         if not limit('request:'+str(request.member.pk),20,3600): return HttpResponse(status=429)
         obj=form.save(commit=False); obj.member=request.member; obj.save(); return redirect('requests')
@@ -188,7 +199,7 @@ def exception_login(request):
                     if ch and ch.attempts<5:
                         ch.attempts+=1; ch.save()
                         if hmac.compare_digest(ch.digest,digest(str(ch.id),code)) and ch.member.active and ch.member.session_version==ch.version and (not settings.DEV or ch.member.synthetic):
-                            ch.used=True; ch.save(); request.session.flush(); rotate_token(request); request.session['member_id']=str(ch.member_id); request.session['member_version']=ch.version; request.session['member_auth']='exception'; request.session.set_expiry(3600); return redirect('/')
+                            ch.used=True; ch.save(); request.session.flush(); rotate_token(request); request.session['member_id']=str(ch.member_id); request.session['member_version']=ch.version; request.session['member_auth']='exception'; request.session['identity_member']=str(ch.member_id); request.session['identity_version']=ch.version; request.session['identity_until']=(timezone.now()+datetime.timedelta(hours=1)).timestamp(); request.session.set_expiry(3600); return redirect('/')
             except (ValueError,ValidationError): pass
         error='접속 수단을 확인할 수 없습니다.'
     return render(request,'portal/exception.html',{'error':error})

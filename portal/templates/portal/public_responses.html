@@ -1,0 +1,2 @@
+<h4>실제로 접수된 상대 측 설명·반론</h4>
+{% for response in responses %}<div class="received-response"><p>접수된 반론의 개인정보 검토 후 공개 발췌 · {{ response.created_at }}</p><p>{{ response.public_excerpt }}</p></div>{% empty %}<p>별도로 공개 승인된 반론 자료가 없습니다. 상대방 입장을 추정하지 않습니다.</p>{% endfor %}

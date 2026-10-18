@@ -158,8 +158,8 @@ class PostAdmin(TrackedAdmin):
 
 @admin.register(Request)
 class RequestAdmin(TrackedAdmin):
-    readonly_fields=['member','kind','case','post','body','created_at']
-    fields=['member','kind','case','post','body','created_at','response','resolved']
+    readonly_fields=['member','kind','case','post','reading_key','comment','body','created_at']
+    fields=['member','kind','case','post','reading_key','comment','body','created_at','response','resolved','public_excerpt','public_approved']
     list_display=['kind','resolved','created_at']
     def has_add_permission(self,request): return False
     def save_model(self,request,obj,form,change):
@@ -263,3 +263,22 @@ class ReviewedImportAdmin(ReadOnlyAdmin):
 @admin.register(RegisteredMaterialCase)
 class RegisteredCaseAdmin(ReadOnlyAdmin):
     list_display=['key','case','verification']
+
+class CommentModerationForm(ModelForm):
+    class Meta:
+        model=CaseComment
+        fields=['hidden','moderation_reason','moderation_note']
+    def clean(self):
+        data=super().clean()
+        if not data.get('moderation_reason') or not data.get('moderation_note','').strip():
+            raise ValidationError('조치 분류와 관리자 전용 근거를 기록하세요. 반대 의견 자체는 조치 사유가 아닙니다.')
+        return data
+
+@admin.register(CaseComment)
+class CaseCommentAdmin(TrackedAdmin):
+    form=CommentModerationForm
+    readonly_fields=['reading_key','member','author_name','author_label','body','parent','created_at','updated_at','edited','deleted_at']
+    fields=readonly_fields+['hidden','moderation_reason','moderation_note']
+    list_display=['id','reading_key','author_name','hidden','created_at']
+    list_filter=['reading_key','hidden']
+    def has_add_permission(self,request): return False
