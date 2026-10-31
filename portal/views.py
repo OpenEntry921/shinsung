@@ -14,7 +14,7 @@ from django.forms import ModelForm
 from .models import *
 from .security import phone, digest, limit, valid_totp, keyed
 from .roster import parse
-from .access import member_approved
+from .access import member_approved, operator_access
 
 GENERIC='입력 내용을 확인할 수 없습니다. 명부 오류·공용 번호·접속 곤란은 운영 관리자에게 문의하세요.'
 def health(request): return JsonResponse({'status':'ok'})
@@ -35,7 +35,7 @@ def login(request):
             with transaction.atomic():
                 matches = Member.objects.select_for_update().filter(name=name, phone=number, active=True)
                 member = matches.first() if matches.count() == 1 else None
-                if (member and member.legacy_operator
+                if (operator_access(member)
                         and Member.objects.filter(phone=number, active=True).count() == 1):
                     request.session.flush()
                     rotate_token(request)

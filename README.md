@@ -15,6 +15,8 @@ APP_MODE=development sh scripts/start-production.sh
 
 개발은 `APP_MODE=development`, 운영은 `APP_MODE=production`을 사용합니다. 시작 시 샘플 교인이나 운영 데이터를 자동 생성하지 않습니다. 서버에서 개별 지정된 기존 운영자는 종전 이름·전화번호 로그인으로 내부 화면과 본인 댓글에 접근합니다. 일반 교인·신규 이용자의 동의·확인·승인 요건은 유지합니다. [로그인 복구·운영 반영 순서](docs/LOGIN_RECOVERY.md)를 확인하세요. 기존 체크아웃을 사용하며 별도 Git worktree를 만들지 않습니다.
 
+가상 데이터 전용 개발 DB에서 예전 `가상교인` / `01000000000` 접속을 명시적으로 복구하려면 `APP_MODE=development .venv/bin/python manage.py seed_demo --enable-login`을 사용합니다. 실제 교인 명부가 있거나 운영 모드이면 거부하며 시작 시 자동 실행하지 않습니다. 이 계정은 Django 관리자가 아닙니다.
+
 [통합 개편 검토·운영 전 설정](docs/INTEGRATION_REVIEW.md)을 먼저 확인하세요. 가입 접수는 운영 주체·연락처·보유기간·교회 수신 창구가 모두 확정되기 전 차단됩니다. 개인정보를 자동 전송하지 않습니다.
 
 관리자 계정은 `createsuperuser`로 별도 생성합니다. 관리자도 개인별 TOTP 추가 인증이 필수입니다. 공개 운영 전 설정·정책·자료 검증이 필요하며 현재 배포된 서비스가 아닙니다.
