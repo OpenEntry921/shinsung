@@ -54,7 +54,7 @@ class PortalTests(TestCase):
     def test_incorrect_name_or_phone_has_no_session(self):
         response=self.client.post('/login/',{'name':'존재하지않는가상교인','phone':self.member.phone})
         from .views import GENERIC
-        self.assertContains(response,"이름·전화번호만으로 로그인하지 않습니다.");self.assertNotIn('member_id',self.client.session)
+        self.assertContains(response,"기존 이용자는 교인 로그인으로 접속해 주세요.");self.assertNotIn('member_id',self.client.session)
     def test_legacy_otp_cannot_create_session(self):
         self.challenge()
         self.assertRedirects(self.client.post('/otp/',{'code':'123456'}),'/login/',fetch_redirect_response=False)
@@ -63,13 +63,13 @@ class PortalTests(TestCase):
         with patch('portal.views.limit',return_value=False):
             response=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
         from .views import GENERIC
-        self.assertContains(response,"이름·전화번호만으로 로그인하지 않습니다.");self.assertNotIn('member_id',self.client.session)
+        self.assertContains(response,"기존 이용자는 교인 로그인으로 접속해 주세요.");self.assertNotIn('member_id',self.client.session)
     def test_unknown_and_inactive_generic_response(self):
         unknown=self.client.post('/login/',{'name':'존재하지않는가상교인','phone':'01000000999'})
         self.member.active=False;self.member.save()
         inactive=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
         from .views import GENERIC
-        self.assertEqual(unknown.content,inactive.content)
+        self.assertEqual(unknown.context['message'],inactive.context['message']);self.assertEqual(unknown.context['message'],GENERIC)
         self.assertNotIn('member_id',self.client.session)
     def test_phone_normalization(self):
         self.client.post("/login/", {"name": self.member.name, "phone": self.member.phone})
@@ -79,7 +79,7 @@ class PortalTests(TestCase):
         self.other.phone=self.member.phone;self.other.save()
         response=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
         from .views import GENERIC
-        self.assertContains(response,"이름·전화번호만으로 로그인하지 않습니다.");self.assertNotIn('member_id',self.client.session)
+        self.assertContains(response,"기존 이용자는 교인 로그인으로 접속해 주세요.");self.assertNotIn('member_id',self.client.session)
     @override_settings(DEV=False,SMS_API_KEY='',SMS_API_SECRET='',SMS_SENDER='')
     def test_no_sms_roster_login(self):
         self.assertEqual(self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone}).status_code,200)

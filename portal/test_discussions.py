@@ -151,7 +151,7 @@ from django.db.migrations.executor import MigrationExecutor
 class DiscussionMigrationTests(TransactionTestCase):
     def test_additive_migration_preserves_member_post_request_and_case_ids(self):
         old=('portal','0009_alter_reviewedmaterialimport_source_digest')
-        new=('portal','0012_accessapplication_church_requested_at_and_more')
+        new=('portal','0013_alter_member_options_member_legacy_operator')
         executor=MigrationExecutor(connection)
         executor.migrate([old])
         try:

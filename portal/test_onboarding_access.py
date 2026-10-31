@@ -48,7 +48,7 @@ from django.db.migrations.executor import MigrationExecutor
 class AccessMigrationTests(TransactionTestCase):
     def test_existing_comment_reply_revision_request_and_member_survive(self):
         old=('portal','0010_member_discussions')
-        new=('portal','0012_accessapplication_church_requested_at_and_more')
+        new=('portal','0013_alter_member_options_member_legacy_operator')
         executor=MigrationExecutor(connection);executor.migrate([old])
         try:
             apps=executor.loader.project_state([old]).apps
@@ -65,4 +65,5 @@ class AccessMigrationTests(TransactionTestCase):
         self.assertEqual(Request.objects.get(pk=item.pk).comment_id,root.pk)
         self.assertEqual(Revision.objects.get(pk=revision.pk).body,{'body':'가상 이력'})
         self.assertEqual(Member.objects.get(pk=member.pk).name,'가상 이관')
+        self.assertFalse(Member.objects.get(pk=member.pk).legacy_operator)
         self.assertEqual(AccessApplication.objects.count(),0)
