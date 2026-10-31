@@ -1,7 +1,7 @@
 """Fail closed on each request, including old sessions and revoked consent."""
 from django.conf import settings
 from django.utils import timezone
-from .models import AccessApplication
+from .models import AccessApplication, Member
 
 POLICY_VERSION = '2026-11-01-v1'
 POLICY_FIELDS = ('OPERATOR_NAME', 'OPERATOR_CONTACT', 'APPLICATION_RETENTION', 'CHURCH_RECIPIENT', 'CHURCH_CONTACT', 'CHURCH_RETENTION')
@@ -24,9 +24,16 @@ def member_approved(member):
         roster_evidence='').exclude(identity_evidence='').exclude(policy_snapshot={}).exists()
 
 
+
+def operator_access(member):
+    if not member or not member.active or not member.legacy_operator:
+        return False
+    # Known synthetic credentials must never expose real roster data or production.
+    return not member.synthetic or (settings.DEV and not Member.objects.filter(synthetic=False).exists())
+
 def access_valid(request):
     member = request.member
-    if member and member.active and member.legacy_operator and request.session.get('member_auth') == 'roster':
+    if operator_access(member) and request.session.get('member_auth') == 'roster':
         return True
     return bool(member_approved(member) and request.session.get('member_auth') == 'exception'
         and request.session.get('identity_member') == str(member.pk)

@@ -16,6 +16,8 @@ class OperatorLoginTests(TestCase):
 
     def test_real_login_path_without_enrollment_opens_all_cases_and_self_comments(self):
         for mode in (True, False):
+            self.operator.synthetic = mode
+            self.operator.save()
             with override_settings(DEV=mode):
                 self.client.logout()
                 with patch('portal.security.requests.post') as sender:
