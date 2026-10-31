@@ -6,7 +6,7 @@
 
 Python 3.12에서 `sh scripts/install.sh`로 고정된 requirements를 설치한다. `APP_MODE=development .venv/bin/python manage.py collectstatic --noinput` 후 `APP_MODE=development .venv/bin/python manage.py test`와 `.venv/bin/python scripts/verify_backup.py`를 실행한다. `APP_MODE=development .venv/bin/python manage.py runserver 127.0.0.1:8000 --noreload`로 시작한다. 상태 검사는 `/health/`의 JSON과 비로그인 `/cases/material/E01/`의 로그인 리다이렉트로 확인한다. 개발 모드는 실제 운영에 사용하지 않는다.
 
-시작 스크립트는 샘플 교인을 자동 생성하지 않는다. 필요한 화면 검증에는 격리된 임시 DB와 테스트 전용 가상 데이터만 사용한다. 개발 DB에도 기존 교인이 자동 승인되지 않는다. 개별 지정된 기존 운영자의 이름·전화번호 로그인 예외는 [로그인 복구 안내](LOGIN_RECOVERY.md)에 따른다. 관리자 계정은 별도로 생성하며, 일반 브라우저 로그인에는 기존 관리자 TOTP 추가 인증이 필요하다.
+기본 시작 스크립트는 샘플 교인을 생성하지 않는다. 가상 데이터 전용 개발 서비스의 명시적 `DEMO_LOGIN_ENABLED=true` 시작 옵션은 [운영 안내](OPERATIONS.md)를 따른다. 필요한 화면 검증에는 격리된 임시 DB와 테스트 전용 가상 데이터만 사용한다. 개발 DB에도 기존 교인이 자동 승인되지 않는다. 개별 지정된 기존 운영자의 이름·전화번호 로그인 예외는 [로그인 복구 안내](LOGIN_RECOVERY.md)에 따른다. 관리자 계정은 별도로 생성하며, 일반 브라우저 로그인에는 기존 관리자 TOTP 추가 인증이 필요하다.
 
 ## 운영 전 필수 설정
 

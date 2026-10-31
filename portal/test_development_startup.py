@@ -70,12 +70,14 @@ class DevelopmentStartupTests(SimpleTestCase):
             STARTUP_TEST_EVENTS=str(self.events),
         )
 
-    def startup(self, mode):
+    def startup(self, mode, demo=None):
         environment = dict(self.environment)
         if mode is None:
             environment.pop('APP_MODE', None)
         else:
             environment['APP_MODE'] = mode
+        environment.pop('DEMO_LOGIN_ENABLED', None)
+        if demo is not None: environment['DEMO_LOGIN_ENABLED'] = demo
         self.events.write_text('')
         result = subprocess.run(
             ['sh', 'scripts/start-production.sh'], cwd=self.root, env=environment,
@@ -100,6 +102,7 @@ class DevelopmentStartupTests(SimpleTestCase):
 
     def assert_order(self, events, seeded):
         expected = ['migrate:start', 'migrate:end']
+        if seeded: expected += ['seed_demo:start', 'seed_demo:end']
         expected += ['bootstrap_roles:start', 'bootstrap_roles:end', 'collectstatic:start', 'collectstatic:end']
         self.assertEqual(events[:-1], expected)
         self.assertEqual(events[-1], 'gunicorn:config.wsgi:application --bind 0.0.0.0:8000 --workers 1 --timeout 30 --error-logfile -')
@@ -107,7 +110,7 @@ class DevelopmentStartupTests(SimpleTestCase):
     def test_empty_development_db_and_repeat_preserve_id_and_post(self):
         result, events = self.startup('development')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assert_order(events, seeded=True)
+        self.assert_order(events, seeded=False)
         before = self.snapshot()
         self.assertEqual(before['members'], [])
         self.manage('shell', '-c', "from portal.models import Member; Member.objects.create(name='가상',phone='01000000000',synthetic=True)")
@@ -118,7 +121,7 @@ class DevelopmentStartupTests(SimpleTestCase):
         with_post = self.snapshot()
         result, events = self.startup('development')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assert_order(events, seeded=True)
+        self.assert_order(events, seeded=False)
         self.assertEqual(self.snapshot(), with_post)
         self.assertEqual(self.snapshot()['posts'][0]['member_id'], member['id'])
 
@@ -150,3 +153,58 @@ class DevelopmentStartupTests(SimpleTestCase):
         self.assertNotIn('가상테스트명부', result.stdout + result.stderr)
         self.assertNotIn('01000000009', result.stdout + result.stderr)
         self.assertEqual(self.snapshot(), before)
+
+    def test_opt_in_startup_prepares_login_and_restart_preserves_member_and_comment(self):
+        result, events = self.startup('development', demo='true')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_order(events, seeded=True)
+        self.manage('shell', '-c',
+            "from django.test import Client; from portal.models import Member,CaseComment,AccessApplication; "
+            "m=Member.objects.get(); assert m.synthetic and m.active and m.legacy_operator; "
+            "assert AccessApplication.objects.count()==0; c=Client(); "
+            "r=c.post('/login/',{'name':'가상교인','phone':'01000000000'}); assert r.status_code==302 and r.url=='/'; "
+            "assert c.get('/').status_code==200; "
+            "assert all(c.get(f'/cases/material/E{i:02}/').status_code==200 for i in range(1,31)); "
+            "r=c.post('/comments/E01/',{'body':'가상 시작 검증 의견'}); assert r.status_code==302")
+        before = self.manage('shell', '-c',
+            "import json; from portal.models import Member,CaseComment,Audit; "
+            "print(json.dumps({'member':list(Member.objects.values_list('id','session_version')), "
+            "'comments':list(CaseComment.objects.values_list('id','member_id','reading_key','body')), "
+            "'grants':Audit.objects.filter(action='synthetic_login_enable').count()},default=str))").splitlines()[-1]
+        result, events = self.startup('development', demo='true')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_order(events, seeded=True)
+        after = self.manage('shell', '-c',
+            "import json; from portal.models import Member,CaseComment,Audit; "
+            "print(json.dumps({'member':list(Member.objects.values_list('id','session_version')), "
+            "'comments':list(CaseComment.objects.values_list('id','member_id','reading_key','body')), "
+            "'grants':Audit.objects.filter(action='synthetic_login_enable').count()},default=str))").splitlines()[-1]
+        self.assertEqual(before, after)
+        self.manage('shell', '-c',
+            "from django.test import Client; from portal.models import CaseComment; c=Client(); "
+            "assert c.post('/login/',{'name':'가상교인','phone':'01000000000'}).status_code==302; "
+            "comment=CaseComment.objects.get(); "
+            "assert c.post(f'/comments/E01/{comment.pk}/',{'action':'delete'}).status_code==302; "
+            "comment.refresh_from_db(); assert comment.deleted_at is not None")
+
+    def test_opt_in_rejects_production_and_real_roster_without_starting_gunicorn(self):
+        result, events = self.startup('production', demo='true')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(events, ['migrate:start','migrate:end','seed_demo:start','seed_demo:failed'])
+        self.assertEqual(self.snapshot()['members'], [])
+        self.manage('shell', '-c',
+            "from portal.models import Member; Member.objects.create(name='가상실제명부구분',phone='01000000009',synthetic=False)")
+        before = self.snapshot()
+        result, events = self.startup('development', demo='true')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(events[-1], 'seed_demo:failed')
+        self.assertEqual(self.snapshot(), before)
+        self.assertNotIn('가상실제명부구분', result.stdout + result.stderr)
+
+    def test_non_true_demo_values_do_not_enable_login(self):
+        for value in ('false', '', 'True', '1'):
+            with self.subTest(value=value):
+                result, events = self.startup('development', demo=value)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assert_order(events, seeded=False)
+                self.assertEqual(self.snapshot()['members'], [])
