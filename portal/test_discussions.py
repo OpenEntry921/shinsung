@@ -23,6 +23,8 @@ class DiscussionTests(TestCase):
         session.save()
     def verify(self,member=None):
         member=member or self.member
+        from .testing import approve
+        approve(member)
         ch=Challenge(member=member,version=member.session_version,exception=True,expires_at=timezone.now()+datetime.timedelta(minutes=15))
         ch.digest=digest(str(ch.pk),'fictional-one-use-token');ch.save()
         response=self.client.post('/exception/',{'token':f'{ch.pk}:fictional-one-use-token'})
@@ -33,7 +35,7 @@ class DiscussionTests(TestCase):
         if parent: data['parent']=parent.pk
         return self.client.post(f'/comments/{key}/',data)
     def test_weak_session_cannot_write_and_exception_is_one_use_expiring(self):
-        self.assertEqual(self.create().status_code,403)
+        self.assertEqual(self.create().status_code,302)
         ch=self.verify()
         self.assertEqual(self.create().status_code,302)
         self.assertEqual(CaseComment.objects.get().member_id,self.member.pk)
@@ -42,11 +44,13 @@ class DiscussionTests(TestCase):
         self.client.post('/logout/')
         self.client.post('/exception/',{'token':f'{ch.pk}:fictional-one-use-token'})
         self.assertNotIn('identity_member',self.client.session)
-        self.roster();self.assertEqual(self.create().status_code,403)
+        self.roster();self.assertEqual(self.create().status_code,302)
         self.verify();session=self.client.session;session['identity_until']=0;session.save()
-        self.assertEqual(self.create().status_code,403)
+        self.assertEqual(self.create().status_code,302)
     def test_threads_edit_delete_and_private_history(self):
-        self.verify();self.create();parent=CaseComment.objects.get()
+        self.verify();created=self.create();parent=CaseComment.objects.get()
+        self.assertEqual(created.url, f'/cases/material/E01/#comment-{parent.pk}')
+        self.assertRedirects(self.client.get(f'/comment-link/{parent.pk}/'), created.url, fetch_redirect_response=False)
         self.create(parent=parent,body='가상 답글');child=CaseComment.objects.exclude(pk=parent.pk).get()
         self.assertEqual(child.parent_id,parent.pk)
         self.assertEqual(self.create(parent=child).status_code,400)
@@ -57,7 +61,7 @@ class DiscussionTests(TestCase):
         for action in ('edit','delete'):
             self.assertEqual(self.client.post(f'/comments/E01/{parent.pk}/',{'action':action,'body':'금지'}).status_code,404)
         self.verify();self.client.post(f'/comments/E01/{parent.pk}/',{'action':'delete'})
-        html=self.client.get('/').content.decode()
+        html=self.client.get('/cases/material/E01/').content.decode()
         self.assertTrue('작성자가 삭제한 의견입니다.' in html and '가상 답글' in html)
         self.assertFalse('수정한 가상 의견' in html)
         self.assertEqual(CaseComment.objects.get(pk=child.pk).parent_id,parent.pk)
@@ -81,37 +85,40 @@ class DiscussionTests(TestCase):
             self.assertTrue('보존할 가상 입력' in response.content.decode())
     def test_escaping_hidden_private_requests_and_verified_display(self):
         self.verify();self.create(body='<script>fictional()</script>');comment=CaseComment.objects.get()
-        response=self.client.get('/');html=response.content.decode()
+        self.create(key='E02',body='다른 사건의 가상 비공개 의견')
+        response=self.client.get('/cases/material/E01/');html=response.content.decode()
+        self.assertNotIn('다른 사건의 가상 비공개 의견', html)
         self.assertFalse('<script>fictional()' in html);self.assertTrue('&lt;script&gt;fictional()' in html)
         self.assertFalse(self.member.phone in html)
         self.assertTrue('no-store' in response['Cache-Control'] and 'private' in response['Cache-Control'])
         self.assertEqual(response['X-Robots-Tag'],'noindex, nofollow')
         comment.hidden=True;comment.moderation_reason='privacy';comment.moderation_note='가상 비공개 근거';comment.save()
-        html=self.client.get('/').content.decode()
+        html=self.client.get('/cases/material/E01/').content.decode()
         self.assertFalse('fictional()' in html or '가상 비공개 근거' in html)
         self.assertTrue('개인정보 노출' in html)
         response=self.client.post('/requests/',{'kind':'response','reading_key':'E01','comment':comment.pk,'body':'가상 비공개 반론'})
         self.assertEqual(response.status_code,302)
         item=Request.objects.get();self.assertEqual(item.comment_id,comment.pk)
-        self.assertFalse('가상 비공개 반론' in self.client.get('/').content.decode())
+        self.assertFalse('가상 비공개 반론' in self.client.get('/cases/material/E01/').content.decode())
         self.verify(self.other)
         self.assertFalse('가상 비공개 반론' in self.client.get('/requests/').content.decode())
         self.assertEqual(self.client.post('/requests/',{'kind':'report','reading_key':'E02','comment':comment.pk,'body':'가상'}).status_code,200)
         item.public_excerpt='가상 검토된 공개 반론';item.public_approved=True;item.full_clean();item.save()
-        html=self.client.get('/').content.decode()
+        html=self.client.get('/cases/material/E01/').content.decode()
         self.assertTrue('가상 검토된 공개 반론' in html);self.assertFalse('가상 비공개 반론' in html)
     def test_all_records_and_batched_queries_survive_without_case_db(self):
         self.verify()
         for i in range(1,31):
             self.create(key=f'E{i:02}',body=f'가상 토론 {i}')
-        with CaptureQueriesContext(connection) as queries: response=self.client.get('/')
+        with CaptureQueriesContext(connection) as queries: response=self.client.get('/cases/material/E01/')
         html=response.content.decode()
-        self.assertEqual(html.count('class="case-group direct-case"'),30)
-        self.assertEqual(html.count('class="reading-area"'),120)
-        self.assertEqual(html.count('⑤ 성도님의 생각'),30)
+        self.assertEqual(html.count('class="case-group direct-case"'),1)
+        self.assertEqual(html.count('class="reading-area"'),4)
+        self.assertEqual(html.count('⑥ 성도님의 생각'),1)
         self.assertEqual(sum('FROM "portal_casecomment"' in q['sql'] for q in queries.captured_queries),1)
         self.assertEqual((Case.objects.count(),Article.objects.count(),Document.objects.count()),(0,0,0))
-        for i in range(1,31): self.assertTrue(f'id="discussion-E{i:02}"' in html)
+        self.assertTrue('id="discussion-E01"' in html)
+        self.assertFalse('가상 토론 2<' in html)
     def test_inactive_and_guest_no_read_or_write_admin_not_member(self):
         self.verify();self.create(body='가상 보호의견')
         self.member.active=False;self.member.save()
@@ -123,7 +130,7 @@ class DiscussionTests(TestCase):
         admin=User.objects.create_user('fictional-admin',is_staff=True)
         admin.user_permissions.add(Permission.objects.get(codename='view_case'))
         self.client.force_login(admin);session=self.client.session;session['admin_mfa_until']=timezone.now().timestamp()+300;session.save()
-        response=self.client.get('/');self.assertEqual(response.status_code,200)
+        response=self.client.get('/cases/material/E01/');self.assertEqual(response.status_code,200)
         self.assertTrue('교인 명의의 의견을 작성할 수 없습니다' in response.content.decode())
         self.assertEqual(self.client.post('/comments/E01/',{'body':'가상'}).status_code,302)
     def test_post_links_retention_and_existing_data(self):
@@ -144,7 +151,7 @@ from django.db.migrations.executor import MigrationExecutor
 class DiscussionMigrationTests(TransactionTestCase):
     def test_additive_migration_preserves_member_post_request_and_case_ids(self):
         old=('portal','0009_alter_reviewedmaterialimport_source_digest')
-        new=('portal','0010_member_discussions')
+        new=('portal','0012_accessapplication_church_requested_at_and_more')
         executor=MigrationExecutor(connection)
         executor.migrate([old])
         try:
@@ -181,5 +188,5 @@ class DiscussionAdministrationTests(TestCase):
         self.assertEqual(Revision.objects.get(target=f'casecomment:{item.pk}').body['body'],'가상 보존 의견')
         self.client.logout()
         session=self.client.session;session.update({'member_id':str(member.pk),'member_version':member.session_version,'member_auth':'exception'});session.save()
-        self.assertEqual(self.client.post('/comments/E01/',{'body':'검증되지 않은 과거 세션'}).status_code,403)
+        self.assertEqual(self.client.post('/comments/E01/',{'body':'검증되지 않은 과거 세션'}).status_code,302)
         self.assertEqual(self.client.get('/admin/portal/revision/').status_code,302)

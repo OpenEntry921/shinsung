@@ -11,11 +11,8 @@ from .security import limit
 
 
 def identity_verified(request):
-    member = request.member
-    return bool(member and request.session.get('member_auth') == 'exception'
-                and request.session.get('identity_member') == str(member.pk)
-                and request.session.get('identity_version') == member.session_version
-                and request.session.get('identity_until', 0) > timezone.now().timestamp())
+    from .access import access_valid
+    return access_valid(request)
 
 
 class CommentForm(forms.Form):
@@ -23,11 +20,11 @@ class CommentForm(forms.Form):
                            widget=forms.Textarea(attrs={'rows': 4}))
 
 
-def discussion_context(request, error=None):
-    # One read for all comments (including replies); no per-event/author queries.
-    groups = {key: {'key': key, 'roots': [], 'responses': [], 'form': CommentForm(auto_id=f'id_{key}_%s')} for key in READING_KEYS}
+def discussion_context(request, key, error=None):
+    # Query only the selected event, including its one-level replies.
+    groups = {key: {'key': key, 'roots': [], 'responses': [], 'form': CommentForm(auto_id=f'id_{key}_%s')} for key in (key,)}
     nodes = {}
-    for comment in CaseComment.objects.filter(reading_key__in=READING_KEYS):
+    for comment in CaseComment.objects.filter(reading_key=key):
         node = {'item': comment, 'replies': [], 'own': bool(request.member and comment.member_id == request.member.pk)}
         nodes[comment.pk] = node
         if not comment.parent_id:
@@ -36,7 +33,7 @@ def discussion_context(request, error=None):
         item = node['item']
         if item.parent_id in nodes:
             nodes[item.parent_id]['replies'].append(node)
-    for response in Request.objects.filter(public_approved=True, kind='response', reading_key__in=READING_KEYS).only('reading_key', 'public_excerpt', 'created_at', 'id').order_by('created_at', 'pk'):
+    for response in Request.objects.filter(public_approved=True, kind='response', reading_key=key).only('reading_key', 'public_excerpt', 'created_at', 'id').order_by('created_at', 'pk'):
         groups[response.reading_key]['responses'].append(response)
     if error:
         groups[error['key']]['error'] = error
@@ -44,8 +41,9 @@ def discussion_context(request, error=None):
 
 
 def failure(request, key, form, action, parent=None, pk=None, status=400):
-    context = discussion_context(request, {'key': key, 'form': form, 'action': action, 'parent': parent, 'pk': pk})
-    return render(request, 'portal/cases.html', context, status=status)
+    context = discussion_context(request, key, {'key': key, 'form': form, 'action': action, 'parent': parent, 'pk': pk})
+    context.update(detail_context(request, key, context))
+    return render(request, 'portal/reading_detail.html', context, status=status)
 
 
 @require_POST
@@ -100,4 +98,15 @@ def comment_write(request, key, pk=None):
             comment.full_clean()
             comment.save()
         Audit.objects.create(actor=str(request.member.pk), action='comment_'+action, target=f'comment:{comment.pk}', reason='본인 확인 교인 요청')
-    return redirect(f'/#comment-{comment.pk}')
+    return redirect(f'/cases/material/{key}/#comment-{comment.pk}')
+
+
+def detail_context(request, key, discussion=None):
+    from django.http import Http404
+    from .reading_registry import reading_entries
+    entries = reading_entries()
+    if key not in READING_KEYS: raise Http404
+    index = next(i for i, e in enumerate(entries) if e['key'] == key)
+    return dict(discussion or discussion_context(request, key), selected_key=key,
+                entry=entries[index], previous=entries[index-1] if index else None,
+                following=entries[index+1] if index+1 < len(entries) else None)

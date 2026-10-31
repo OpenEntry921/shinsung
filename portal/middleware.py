@@ -10,6 +10,8 @@ class AccessMiddleware:
         from django.utils.cache import patch_vary_headers
         response=self.authorize(request)
         response['Cache-Control']='no-store, private'
+        response['X-Robots-Tag']='noindex, nofollow'
+        response['Content-Security-Policy']="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         patch_vary_headers(response, ('Cookie',))
         return response
     def authorize(self,request):
@@ -20,8 +22,14 @@ class AccessMiddleware:
             if member and request.session.get('member_auth') in ('roster','exception') and member.session_version == request.session.get('member_version') and (request.session.get('member_auth')=='exception' or Member.objects.filter(phone=member.phone,active=True).count()==1):
                 request.member=member
             else: request.session.flush()
+        from .access import access_valid
+        if request.member and not access_valid(request):
+            request.session.flush()
+            request.member = None
+        if request.user.is_authenticated and request.user.is_staff:
+            request.member = None
         path=request.path
-        public=path in ('/login/','/otp/','/exception/','/policy/','/health/') or path.startswith('/static/')
+        public=path in ('/login/','/otp/','/exception/','/policy/','/health/','/apply/') or path.startswith('/static/')
         admin_public=path in ('/admin/login/','/admin/logout/','/admin-mfa/')
         fixed_path=path=='/' or path.startswith('/cases/')
         fixed_admin=(request.user.is_authenticated and request.user.is_active and request.user.is_staff and request.user.has_perm('portal.view_case') and request.session.get('admin_mfa_until',0)>timezone.now().timestamp()) if fixed_path else False

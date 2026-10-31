@@ -28,7 +28,8 @@ class ReviewedMaterialTests(TestCase):
     def write(self):self.manifest.write_text(json.dumps(self.plan,ensure_ascii=False))
     def run_import(self,**kwargs):return register(self.source,self.manifest,self.author.username,self.reviewer.username,reason='가상 편집 검토 승인',**kwargs)
     def member_session(self):
-        session=self.client.session;session['member_auth']='roster';session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session.save()
+        from .testing import member_session
+        member_session(self.client, self.member)
     def test_preview_and_atomic_published_registration(self):
         self.assertEqual(self.run_import()['create_cases'],1);self.assertEqual(Case.objects.count(),0)
         result=self.run_import(apply=True,publish=True);self.assertEqual(result['published_cases'],1)
@@ -65,7 +66,7 @@ class ReviewedMaterialTests(TestCase):
         self.run_import(apply=True,publish=True);self.member_session()
         response=self.client.get('/')
         self.assertNotContains(response,'가상 원문 발췌')
-        self.assertContains(response,'material-E01')
+        self.assertContains(response,'/cases/material/E01/')
         self.assertNotContains(response,'검색 조건 초기화')
     def test_original_guest_inactive_and_direct_link_protection(self):
         self.run_import(apply=True,publish=True);case=Case.objects.get();doc=Document.objects.get()
