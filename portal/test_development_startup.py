@@ -15,31 +15,13 @@ from .models import Challenge, Member
 
 @override_settings(DEV=True,SECURE_SSL_REDIRECT=False,SMS_API_KEY='',SMS_API_SECRET='',SMS_SENDER='')
 class DemoLoginTests(TestCase):
-    def test_existing_synthetic_member_uses_roster_without_sms(self):
+    def test_demo_and_existing_members_are_not_automatically_authorized(self):
         call_command('seed_demo',verbosity=0)
-        with patch('portal.security.requests.post') as sender:
-            response=self.client.post('/login/',{'name':'가상교인','phone':'01000000000'})
-        sender.assert_not_called()
-        self.assertRedirects(response,'/',fetch_redirect_response=False)
-        self.assertEqual(self.client.get('/').status_code,200)
-        self.assertEqual(Challenge.objects.count(),0)
-    def test_active_non_synthetic_roster_member_can_login(self):
-        member=Member.objects.create(name='가상테스트명부',phone='01000000009',synthetic=False)
-        self.assertRedirects(self.client.post('/login/',{'name':member.name,'phone':member.phone}),'/',fetch_redirect_response=False)
-        self.assertEqual(self.client.session['member_id'],str(member.pk))
-    def test_legacy_code_url_returns_to_login(self):
-        response=self.client.post('/otp/',{'code':'000000'},follow=True)
-        self.assertEqual(response.status_code,200)
-        self.assertFalse('가상 발송 인증번호'.encode() in response.content)
-        self.assertNotIn('member_id',self.client.session)
-    @override_settings(DEV=False)
-    def test_production_no_seed_but_existing_roster_login_without_sms(self):
-        with self.assertRaises(CommandError):call_command('seed_demo')
-        self.assertEqual(Member.objects.count(),0)
-        member=Member.objects.create(name='가상교인',phone='01000000000',synthetic=True)
-        self.assertRedirects(self.client.post('/login/',{'name':member.name,'phone':member.phone}),'/',fetch_redirect_response=False)
-        self.assertEqual(self.client.session['member_id'],str(member.pk))
-        self.assertEqual(Challenge.objects.count(),0)
+        member=Member.objects.get()
+        self.client.post('/login/', {'name': member.name, 'phone': member.phone})
+        self.assertNotIn('member_id', self.client.session)
+        self.assertEqual(self.client.get('/').status_code,302)
+
 
 
 class DevelopmentStartupTests(SimpleTestCase):
@@ -118,8 +100,6 @@ class DevelopmentStartupTests(SimpleTestCase):
 
     def assert_order(self, events, seeded):
         expected = ['migrate:start', 'migrate:end']
-        if seeded:
-            expected += ['seed_demo:start', 'seed_demo:end']
         expected += ['bootstrap_roles:start', 'bootstrap_roles:end', 'collectstatic:start', 'collectstatic:end']
         self.assertEqual(events[:-1], expected)
         self.assertEqual(events[-1], 'gunicorn:config.wsgi:application --bind 0.0.0.0:8000 --workers 1 --timeout 30 --error-logfile -')
@@ -129,9 +109,9 @@ class DevelopmentStartupTests(SimpleTestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_order(events, seeded=True)
         before = self.snapshot()
-        self.assertEqual(len(before['members']), 1)
-        member = before['members'][0]
-        self.assertEqual((member['name'], member['phone'], member['synthetic']), ('가상교인', '01000000000', True))
+        self.assertEqual(before['members'], [])
+        self.manage('shell', '-c', "from portal.models import Member; Member.objects.create(name='가상',phone='01000000000',synthetic=True)")
+        member = self.snapshot()['members'][0]
         self.manage('shell', '-c',
             "from portal.models import Member,Post; m=Member.objects.get(); "
             "Post.objects.create(member=m,author_name=m.name,title='가상 테스트 글',body='가상 보존 확인')")
@@ -165,9 +145,8 @@ class DevelopmentStartupTests(SimpleTestCase):
             "Post.objects.create(member=m,author_name=m.name,title='가상 보존 글',body='가상 보존 확인')")
         before = self.snapshot()
         result, events = self.startup('development')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(events, ['migrate:start', 'migrate:end', 'seed_demo:start', 'seed_demo:failed'])
-        self.assertIn('실제 명부가 있는 DB에는 시연 데이터를 추가하지 않습니다.', result.stderr)
+        self.assertEqual(result.returncode, 0)
+        self.assert_order(events, seeded=False)
         self.assertNotIn('가상테스트명부', result.stdout + result.stderr)
         self.assertNotIn('01000000009', result.stdout + result.stderr)
         self.assertEqual(self.snapshot(), before)

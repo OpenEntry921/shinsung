@@ -405,3 +405,60 @@ class CaseComment(models.Model):
             raise ValidationError('숨김에는 공개 분류와 관리자 전용 근거가 필요합니다.')
     def __str__(self):
         return f'{self.reading_key} · 의견 {self.pk}'
+
+
+class ProgressRecord(models.Model):
+    CATEGORIES = [('update','최근 업데이트'), ('issue','주요 확인사항'), ('request','질의·시정 요청'), ('response','답변·진행 상태'), ('week','이번 주 안내')]
+    category = models.CharField(max_length=16, choices=CATEGORIES)
+    title = models.CharField(max_length=200)
+    public_text = models.TextField('게시 가능한 내용 (실명·상담 기록 제외)')
+    reading_key = models.CharField(max_length=3, choices=READING_CHOICES, blank=True)
+    basis_on = models.DateField('기준일')
+    recipient = models.CharField('수신 주체', max_length=200, blank=True)
+    delivered_on = models.DateField('실제 전달일', null=True, blank=True)
+    reply_requested_on = models.DateField('답변 요청일 (법정·교단 기한 아님)', null=True, blank=True)
+    rule_deadline = models.CharField('법정·교단 기한과 근거 (확인한 경우)', max_length=300, blank=True)
+    status = models.CharField(max_length=16, choices=[('preparing','준비 중'),('delivered','전달 완료'),('received','답변 수령'),('review','검토 중'),('verified','이행 확인')], default='preparing')
+    published = models.BooleanField('개인정보 제거 후 게시', default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        if self.status == 'delivered' and not (self.recipient and self.delivered_on):
+            raise ValidationError('전달 완료에는 실제 수신 주체와 전달일이 필요합니다.')
+
+
+class RoadmapStage(models.Model):
+    STEPS = [(1,'사실·자료 정리'),(2,'양측 설명과 교인 의견 수렴'),(3,'구체적인 설명·시정 요구'),(4,'답변 검토와 이행 확인'),(5,'미해결 쟁점의 조정·교단 절차·법적 대응 검토')]
+    step = models.PositiveSmallIntegerField(unique=True, choices=STEPS)
+    status = models.CharField(max_length=16, choices=[('unset','진행 상태 등록 전'),('planned','예정'),('active','진행 중'),('done','완료')], default='unset')
+    explanation = models.TextField('확인된 진행 설명', blank=True)
+    basis_on = models.DateField('기준일')
+
+
+class AccessApplication(models.Model):
+    """An application never creates or matches a Member automatically."""
+    name = models.CharField(max_length=80)
+    phone = models.CharField(max_length=20)
+    consent_version = models.CharField(max_length=40, editable=False)
+    privacy_consent_at = models.DateTimeField(null=True, editable=False)
+    religious_consent_at = models.DateTimeField(null=True, editable=False)
+    transfer_consent_at = models.DateTimeField(null=True, editable=False)
+    policy_snapshot = models.JSONField(default=dict, editable=False)
+    member = models.ForeignKey(Member, on_delete=models.PROTECT, null=True, blank=True)
+    church_requested_at = models.DateTimeField('교회에 수동 대조 요청한 시각 (실제 전달 후 기록)', null=True, blank=True)
+    church_result = models.TextField('교회 회신·대조 결과 (관리자 전용, 실제 확인만 기록)', blank=True)
+    roster_checked_at = models.DateTimeField('교인 대조 확인 시각', null=True, blank=True)
+    roster_evidence = models.TextField('교인 대조 방법·결과 (관리자 전용)', blank=True)
+    identity_checked_at = models.DateTimeField('별도 본인 확인 시각', null=True, blank=True)
+    identity_evidence = models.TextField('실제 본인 확인 방법·기록 (이름·번호 일치만으로 불가)', blank=True)
+    approved = models.BooleanField('승인', default=False)
+    revoked_at = models.DateTimeField('승인·동의 철회 시각', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        if self.approved and not (self.member_id and self.privacy_consent_at and self.religious_consent_at and self.transfer_consent_at and self.consent_version and self.policy_snapshot and self.roster_checked_at and self.roster_evidence.strip() and self.identity_checked_at and self.identity_evidence.strip() and not self.revoked_at):
+            raise ValidationError('동의·교인 대조·별도 본인 확인 기록과 기존 교인 연결이 모두 필요합니다.')
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

@@ -1,0 +1,10 @@
+{% extends 'portal/base.html' %}{% block content %}<div class="narrow"><h1>가입 신청·명시적 동의</h1>
+<p>가입 신청 → 명시적 동의 → 교인 여부 대조 → 별도 본인 확인 → 승인 → 열람·작성</p>
+<p>사건과 실명 의견은 가입 신청 후 필요한 개인정보 처리에 명시적으로 동의하고, 교인 여부와 본인 확인을 마친 이용자에게만 제공됩니다. 가입 신청만으로 열람 권한이 부여되지는 않습니다.</p>
+{% if not ready %}<p class="notice">가입 접수 준비 중입니다. 운영 주체·연락처·보유기간·교회 수신 기관과 담당 창구 확정 전에는 개인정보를 접수하거나 전달하지 않습니다.</p>
+{% elif submitted %}<p role="status">신청을 접수했습니다. 교인 대조·별도 본인 확인 및 승인 전에는 열람 권한이 없습니다. 개인정보는 자동 전송되지 않습니다.</p>
+{% else %}<section class="card"><h2>동의 안내 · {{ version }}</h2><p>처리 주체: {{ OPERATOR_NAME }} · 문의·동의 철회: {{ OPERATOR_CONTACT }}</p>
+<p>이름·연락처는 가입·교인 대조·별도 본인 확인에 사용합니다. 교인 여부 확인에는 종교 소속 정보가 수반됩니다. 수집·이용 보유기간 및 파기 기준: {{ APPLICATION_RETENTION }}</p>
+<p>제공받는 자: {{ CHURCH_RECIPIENT }} · 담당 창구: {{ CHURCH_CONTACT }}<br>목적: 신청자의 교인 여부 대조<br>제공 항목: 이름·연락처 (신청자별 최소 항목)<br>수신자 보유기간·파기 기준: {{ CHURCH_RETENTION }}</p>
+<p>각 동의를 거부할 수 있으나, 확인에 필요한 동의를 거부하면 신청·승인 및 열람·작성을 제공할 수 없습니다. 운영자에게 동의 철회를 요청하면 접근을 중단하고 고지한 보유·파기 절차에 따릅니다. 사이트 주장에 대한 동의나 지지를 요구하지 않습니다. 교회 전체 명부를 복제하지 않으며 자동 발송하지 않습니다.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button>동의 후 가입 신청</button></form></section>{% endif %}<a href="/policy/">운영·개인정보 안내</a></div>{% endblock %}

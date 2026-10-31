@@ -1,10 +1,23 @@
 {% extends 'portal/base.html' %}
 {% block content %}
-<style>
-.direct-case{margin:48px 0;padding:32px 0;border-top:1px solid #d9e1db;overflow-wrap:anywhere;min-width:0}.direct-case h2{line-height:1.5}.reading-area{margin:28px 0;padding:20px 0;border-top:1px solid #d9e1db;overflow-wrap:anywhere;min-width:0}.reading-area h3{font-size:24px;line-height:1.5}.reading-area h4{margin:24px 0 8px}.reading-excerpt{margin:24px 0}.reading-area p{line-height:1.9}.uncertain-heading{margin-top:64px}@media(max-width:600px){.reading-area h3{font-size:21px}.direct-case{margin:32px 0;padding:24px 0}}
-.discussion-area{border-top:1px solid #d9e1db;margin-top:28px;padding-top:20px;min-width:0;overflow-wrap:anywhere}.comment-item{padding:20px 0;border-bottom:1px solid #d9e1db}.comment-replies{margin-left:20px;border-left:2px solid #d9e1db;padding-left:16px}.discussion-area form{margin:20px 0}.discussion-area textarea{min-height:110px;resize:vertical}.discussion-area label{font-weight:600}.received-response{border-left:3px solid #899d94;padding-left:16px}@media(max-width:600px){.comment-replies{margin-left:8px;padding-left:10px}.discussion-area h3{font-size:21px}}
-</style>
-<p class="notice">교회에서 있었던 일과 관련 자료, 그리고 그에 대한 우리의 생각을 정리했습니다. 내용을 읽고 성도님의 생각을 들려주십시오. 우리의 해석에 잘못이 있거나 빠진 사실이 있다면 근거와 함께 알려주십시오. 확인하여 바로잡겠습니다. 다른 의견과 반론도 같은 기준으로 존중하겠습니다.</p>
-<p>사건별 의견은 아래에서, 사건과 직접 관련 없는 글은 <a href="/posts/">자유 게시판</a>에서 나눌 수 있습니다.</p>
-{% include 'portal/direct_case_reading.html' %}
+{% include 'portal/reading_styles.html' %}
+<h1>함께 살펴보고, 함께 풀어갈 기록</h1>
+<p class="notice">이곳은 교인들이 자료와 서로 다른 설명을 살펴보고 의견을 나누는 독립적인 공간입니다. 운영진의 해석에 반대하는 의견과 추가 자료도 제출할 수 있습니다. 확인된 오류는 정정하며, 반대 의견이라는 이유로 배제하지 않습니다.</p>
+<p><a href="/requests/">반론·정정·자료 제출</a> · <a href="/posts/">자유 게시판</a></p>
+<section aria-labelledby="dashboard"><h2 id="dashboard">공동 상황판</h2>
+<p>확인·게시된 기록만 표시합니다. 답변이 없다는 사실은 잘못의 인정을 뜻하지 않습니다.</p>
+<div class="dashboard-grid">{% for label, records in dashboard_groups %}<section class="card"><h3>{{ label }}</h3>
+{% for record in records %}<article><h4>{{ record.title }}</h4><p>{{ record.public_text }}</p>
+<p>기준일 {{ record.basis_on }} · 업데이트 {{ record.updated_at|date:'Y-m-d H:i' }} · {{ record.get_status_display }}</p>
+{% if record.recipient %}<p>수신 주체: {{ record.recipient }}<br>전달일: {{ record.delivered_on|default:'전달 기록 없음' }}<br>답변 요청일: {{ record.reply_requested_on|default:'미등록' }} (요청 일정이며 법정·교단 기한이 아닙니다.)<br>규정상 기한·근거: {{ record.rule_deadline|default:'미확인' }}</p>{% endif %}
+{% if record.reading_key %}<a href="{% url 'fixed_case' record.reading_key %}">{{ record.reading_key }} 상세 보기</a>{% endif %}</article>
+{% empty %}<p>아직 등록된 진행 기록이 없습니다</p>{% endfor %}</section>{% endfor %}</div></section>
+<section aria-labelledby="roadmap"><h2 id="roadmap">해결 절차 로드맵</h2>
+<p>사건별 진행 단계는 다를 수 있습니다. 마지막 단계는 대응 필요성과 방법을 검토하는 단계이며 소송이나 외부 공개로 자동 연결되지 않습니다.</p>
+<ol class="roadmap">{% for number, title, stage in roadmap %}<li class="card"><h3>{{ title }}</h3><p>{{ stage.get_status_display|default:'진행 상태 등록 전' }}</p><p>{% if stage.explanation %}{{ stage.explanation }}{% elif number == 1 %}자료의 출처와 날짜, 확인할 사실을 정리합니다.{% elif number == 2 %}양측의 설명·반론과 교인 의견을 같은 기준으로 받습니다.{% elif number == 3 %}확인할 질문과 필요한 시정 내용을 구체적으로 정리합니다.{% elif number == 4 %}답변의 근거를 살펴보고 확인된 이행을 기록합니다.{% else %}남은 쟁점과 조정·교단 절차·법적 대응의 필요성을 검토합니다.{% endif %}</p>{% if stage %}<small>기준일 {{ stage.basis_on }}</small>{% endif %}</li>{% endfor %}</ol></section>
+<section aria-labelledby="timeline"><h2 id="timeline">사건 타임라인</h2><p>E01~E30은 열람용 자료 번호이며 공식 사건번호가 아닙니다. 날짜는 기존 자료의 표현을 유지합니다.</p>
+<ol class="timeline">{% for entry in dated_entries %}{% include 'portal/timeline_item.html' %}{% endfor %}</ol>
+<h3>시점·선후관계 추가 확인이 필요한 사건</h3><p>아래 사건은 발생 기간이 겹치거나 개별 시점이 불명확합니다. 확정 연대순으로 배치하지 않습니다.</p>
+<ul class="uncertain-list">{% for entry in uncertain_entries %}{% include 'portal/timeline_item.html' %}{% endfor %}</ul></section>
+<p><a href="/policy/">개인정보·교인 확인 및 운영 안내</a></p>
 {% endblock %}

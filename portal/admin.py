@@ -282,3 +282,29 @@ class CaseCommentAdmin(TrackedAdmin):
     list_display=['id','reading_key','author_name','hidden','created_at']
     list_filter=['reading_key','hidden']
     def has_add_permission(self,request): return False
+
+
+@admin.register(ProgressRecord)
+class ProgressAdmin(TrackedAdmin):
+    list_display = ['category', 'title', 'basis_on', 'status', 'published']
+    list_filter = ['category', 'published', 'status']
+
+@admin.register(RoadmapStage)
+class RoadmapAdmin(TrackedAdmin):
+    list_display = ['step', 'status', 'basis_on']
+
+@admin.register(AccessApplication)
+class ApplicationAdmin(TrackedAdmin):
+    list_display = ['id', 'created_at', 'approved', 'revoked_at']
+    readonly_fields = ['name', 'phone', 'consent_version', 'privacy_consent_at', 'religious_consent_at', 'transfer_consent_at', 'policy_snapshot', 'created_at']
+    def has_add_permission(self, request): return False
+    def save_model(self, request, obj, form, change):
+        # Do not duplicate application PII in revision JSON; preserve safe state changes.
+        old = AccessApplication.objects.get(pk=obj.pk)
+        Revision.objects.create(target=f'accessapplication:{obj.pk}', actor=str(request.user.pk),
+            body={k: str(getattr(old, k)) for k in ('member_id', 'approved', 'revoked_at', 'roster_checked_at', 'identity_checked_at', 'church_requested_at', 'church_result')})
+        obj.save()
+        for member_id in {old.member_id, obj.member_id} - {None}:
+            from django.db.models import F
+            Member.objects.filter(pk=member_id).update(session_version=F('session_version') + 1)
+        Audit.objects.create(actor=str(request.user.pk), action='application_review', target=f'accessapplication:{obj.pk}', reason='동의·교인·본인 확인 및 승인 상태 변경')

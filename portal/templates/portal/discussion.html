@@ -1,6 +1,6 @@
 <section class="discussion-area" id="discussion-{{ group.key }}" aria-labelledby="discussion-heading-{{ group.key }}">
-<h3 id="discussion-heading-{{ group.key }}">⑤ 성도님의 생각</h3>
-<p>이 사건을 어떻게 보셨습니까? 다른 사실이나 해석, 앞으로의 해결 방향을 자유롭게 남겨주십시오.</p>
+<h3 id="discussion-heading-{{ group.key }}">⑥ 성도님의 생각</h3>
+<p>다른 사실이나 해석이 있다면 근거와 함께 알려주십시오. 반론·추가 설명·정정 내용을 검토하고 해당 사건의 기록에 반영하겠습니다. 의견 작성은 운영진의 입장에 동의한다는 뜻이 아닙니다.</p>
 <p><a href="/posts/new/?reading_key={{ group.key }}">자유 게시판에서 이 사건에 관한 글 작성</a> · <a href="/requests/?reading_key={{ group.key }}&amp;kind=response">비공개 반론·자료 제출</a></p>
 {% if group.error %}<div id="comment-error-{{ group.key }}" class="notice" role="alert"><h4>입력 내용을 확인하세요</h4>
 <form method="post" action="{% if group.error.pk %}{% url 'comment_change' group.key group.error.pk %}{% else %}{% url 'comment_create' group.key %}{% endif %}#discussion-{{ group.key }}">{% csrf_token %}<input type="hidden" name="action" value="{{ group.error.action }}">{% if group.error.parent %}<input type="hidden" name="parent" value="{{ group.error.parent }}">{% endif %}{% if group.error.action == 'delete' %}{{ group.error.form.non_field_errors }}{% else %}{{ group.error.form.as_p }}{% endif %}<button>다시 제출</button></form></div>{% endif %}

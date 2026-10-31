@@ -14,31 +14,15 @@ from django.forms import ModelForm
 from .models import *
 from .security import phone, digest, limit, valid_totp, keyed
 from .roster import parse
+from .access import member_approved
 
 GENERIC='입력 내용을 확인할 수 없습니다. 명부 오류·공용 번호·접속 곤란은 운영 관리자에게 문의하세요.'
 def health(request): return JsonResponse({'status':'ok'})
-def policy(request): return render(request,'portal/policy.html',{'operator_name':settings.OPERATOR_NAME,'operator_contact':settings.OPERATOR_CONTACT})
+def policy(request):
+    from .access import policy_config
+    return render(request, 'portal/policy.html', dict(policy_config(), operator_name=settings.OPERATOR_NAME, operator_contact=settings.OPERATOR_CONTACT))
 def login(request):
-    message=''
-    if request.method=='POST':
-        message=GENERIC
-        name=request.POST.get('name','').strip()[:80]
-        number=phone(request.POST.get('phone',''))[:20]
-        allowed=limit('ip:'+request.META.get('REMOTE_ADDR',''),20,3600)
-        if allowed: allowed=limit('phone-hour:'+number,5,3600)
-        if allowed and name and number:
-            with transaction.atomic():
-                matches=Member.objects.select_for_update().filter(name=name,phone=number,active=True)
-                member=matches.first() if matches.count()==1 else None
-                if member and Member.objects.filter(phone=number,active=True).count()==1:
-                    request.session.flush()
-                    rotate_token(request)
-                    request.session['member_id']=str(member.pk)
-                    request.session['member_version']=member.session_version
-                    request.session['member_auth']='roster'
-                    request.session.set_expiry(3600)
-                    return redirect('/')
-    return render(request,'portal/login.html',{'message':message})
+    return render(request, 'portal/login.html')
 
 @require_POST
 def otp(request):
@@ -60,18 +44,24 @@ def admin_mfa(request):
     return render(request,'portal/mfa.html',{'error':error})
 
 def cases(request):
-    from .discussions import discussion_context
-    return render(request, 'portal/cases.html', discussion_context(request))
+    from .reading_registry import reading_entries
+    from django.db.models import Count
+    counts = dict(CaseComment.objects.filter(hidden=False, deleted_at=None).values('reading_key').annotate(n=Count('pk')).values_list('reading_key', 'n'))
+    entries = reading_entries()
+    for entry in entries: entry['count'] = counts.get(entry['key'], 0)
+    return render(request, 'portal/cases.html', {
+        'dated_entries': [e for e in entries if not e['uncertain']],
+        'uncertain_entries': [e for e in entries if e['uncertain']],
+        'dashboard_groups': [(label, ProgressRecord.objects.filter(category=kind, published=True).order_by('-basis_on', '-updated_at')) for kind, label in ProgressRecord.CATEGORIES],
+        'roadmap': [(n, title, RoadmapStage.objects.filter(step=n).first()) for n, title in RoadmapStage.STEPS],
+    })
 
 
 def case_detail(request, pk=None, key=None):
-    from django.http import Http404
     if pk is not None and 1 <= pk <= 30:
-        key = f'E{pk:02}'
-    from .reading_registry import READING_KEYS
-    if key not in READING_KEYS:
-        raise Http404
-    return redirect('/#material-' + key)
+        return redirect('fixed_case', key=f'E{pk:02}')
+    from .discussions import detail_context
+    return render(request, 'portal/reading_detail.html', detail_context(request, key))
 
 
 def documents(request,pk,kind):
@@ -180,7 +170,7 @@ def exception_issue(request):
         try: member=Member.objects.filter(pk=uuid.UUID(request.POST.get('member','')),active=True).first()
         except ValueError: member=None
         reason=request.POST.get('reason','').strip()
-        if member and reason and request.POST.get('confirmed')=='yes' and (not settings.DEV or member.synthetic):
+        if member and member_approved(member) and reason and request.POST.get('confirmed')=='yes' and (not settings.DEV or member.synthetic):
             code=secrets.token_urlsafe(32)
             challenge=Challenge(member=member,version=member.session_version,expires_at=timezone.now()+datetime.timedelta(minutes=15),exception=True)
             challenge.digest=digest(str(challenge.id),code); challenge.save(); token=f'{challenge.id}:{code}'
@@ -198,8 +188,37 @@ def exception_login(request):
                     ch=Challenge.objects.select_for_update().filter(pk=cid,exception=True,used=False,expires_at__gt=timezone.now()).first()
                     if ch and ch.attempts<5:
                         ch.attempts+=1; ch.save()
-                        if hmac.compare_digest(ch.digest,digest(str(ch.id),code)) and ch.member.active and ch.member.session_version==ch.version and (not settings.DEV or ch.member.synthetic):
+                        if hmac.compare_digest(ch.digest,digest(str(ch.id),code)) and member_approved(ch.member) and ch.member.active and ch.member.session_version==ch.version and (not settings.DEV or ch.member.synthetic):
                             ch.used=True; ch.save(); request.session.flush(); rotate_token(request); request.session['member_id']=str(ch.member_id); request.session['member_version']=ch.version; request.session['member_auth']='exception'; request.session['identity_member']=str(ch.member_id); request.session['identity_version']=ch.version; request.session['identity_until']=(timezone.now()+datetime.timedelta(hours=1)).timestamp(); request.session.set_expiry(3600); return redirect('/')
             except (ValueError,ValidationError): pass
         error='접속 수단을 확인할 수 없습니다.'
     return render(request,'portal/exception.html',{'error':error})
+
+
+def apply(request):
+    from django import forms
+    from .access import registration_ready, policy_config, POLICY_VERSION
+    class ApplicationForm(forms.Form):
+        name = forms.CharField(label='이름', max_length=80)
+        phone = forms.RegexField(label='연락처', regex=r'^0[0-9]{8,10}$', max_length=20)
+        privacy = forms.BooleanField(label='가입·인증을 위한 이름·연락처 수집·이용에 동의합니다.')
+        religion = forms.BooleanField(label='교인 여부 확인에 수반되는 종교 소속 정보 처리에 별도로 동의합니다.')
+        transfer = forms.BooleanField(label='아래 교회 대조 요청을 위한 제삼자 제공에 별도로 동의합니다.')
+    ready = registration_ready()
+    form = ApplicationForm(request.POST if request.method == 'POST' else None)
+    submitted = False
+    if ready and request.method == 'POST':
+        if not limit('application:'+request.META.get('REMOTE_ADDR',''), 5, 3600):
+            return HttpResponse('잠시 후 다시 시도하세요.', status=429)
+        if form.is_valid():
+            now = timezone.now()
+            AccessApplication.objects.create(name=form.cleaned_data['name'], phone=form.cleaned_data['phone'],
+                consent_version=POLICY_VERSION, privacy_consent_at=now, religious_consent_at=now,
+                transfer_consent_at=now, policy_snapshot=policy_config())
+            submitted = True
+    return render(request, 'portal/apply.html', dict(policy_config(), form=form, ready=ready, submitted=submitted, version=POLICY_VERSION))
+
+
+def comment_link(request, pk):
+    comment=get_object_or_404(CaseComment, pk=pk)
+    return redirect(f'/cases/material/{comment.reading_key}/#comment-{comment.pk}')

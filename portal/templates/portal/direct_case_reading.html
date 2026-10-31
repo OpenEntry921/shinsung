@@ -3,7 +3,7 @@
 <p class="notice">2026년 9월 19일 기준 첨부 검토 문서에서 사건 경과와 관련 의견을 발췌했습니다. 검토 의견은 공식 판결과 구분되며, 이후 진행 상황은 반영되지 않을 수 있습니다.</p>
 {# 출처 문서는 「신성커뮤니티교회 분쟁 사실관계 정리 및 대응 전략」이라는 내부 검토 자료입니다. #}
 <p>판결문·결정문 자체를 직접 대조하지 않았습니다. E01~E30은 열람용 자료 번호이며 공식 사건번호가 아닙니다. 제목과 연결 설명은 편집자가 정리했습니다.</p>
-<article class="case-group direct-case" id="material-E01"><h2>E01 · 목사 부임과 교회명 변경</h2>
+{% if selected_key == 'E01' %}<article class="case-group direct-case" id="material-E01"><h2>E01 · 목사 부임과 교회명 변경</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2020.5</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>목사님 부임, 이후 교회명을 신성커뮤니티교회로 변경</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 1번째 사건행 (b11:r2)</p> #}</div>
@@ -16,8 +16,8 @@
 {% event_responses 'E01' %}
 </section>
 {% event_discussion 'E01' %}
-</article>
-<article class="case-group direct-case" id="material-E02"><h2>E02 · 구조변경 공사</h2>
+</article>{% endif %}
+{% if selected_key == 'E02' %}<article class="case-group direct-case" id="material-E02"><h2>E02 · 구조변경 공사</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2023.6.13</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>1층 카페 창틀·2층 찬양대 구조변경 공사(약 1,670만 원)</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 2번째 사건행 (b11:r3)</p> #}</div>
@@ -31,8 +31,8 @@
 {% event_responses 'E02' %}
 </section>
 {% event_discussion 'E02' %}
-</article>
-<article class="case-group direct-case" id="material-E03"><h2>E03 · 카페 신고·세무대리인 선임과 투입 재정</h2>
+</article>{% endif %}
+{% if selected_key == 'E03' %}<article class="case-group direct-case" id="material-E03"><h2>E03 · 카페 신고·세무대리인 선임과 투입 재정</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2023.12</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>카페 영업신고(12.19), 변호사 검토보고서(12.26), 당회가 카페 세무대리인 선임(12.30). 카페는 목사 배우자 명의, 교회 재정 약 2억 3,500만 원 투입</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 3번째 사건행 (b11:r4)</p> #}</div>
@@ -46,8 +46,8 @@
 {% event_responses 'E03' %}
 </section>
 {% event_discussion 'E03' %}
-</article>
-<article class="case-group direct-case" id="material-E04"><h2>E04 · 4층 공사 논의와 단체대화방 동의</h2>
+</article>{% endif %}
+{% if selected_key == 'E04' %}<article class="case-group direct-case" id="material-E04"><h2>E04 · 4층 공사 논의와 단체대화방 동의</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2024.2.24~26</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>4층 공사: 당회 논의(목사님 참여, 정식 안건 부의는 미완료) → 당회·건축위 단톡방에서 견적 공개 및 동의</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 4번째 사건행 (b11:r5)</p> #}</div>
@@ -61,8 +61,8 @@
 {% event_responses 'E04' %}
 </section>
 {% event_discussion 'E04' %}
-</article>
-<article class="case-group direct-case" id="material-E05"><h2>E05 · 건축자금 집행 내역 요구</h2>
+</article>{% endif %}
+{% if selected_key == 'E05' %}<article class="case-group direct-case" id="material-E05"><h2>E05 · 건축자금 집행 내역 요구</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2024.8</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>건축자금 집행을 둘러싼 카톡 분쟁(장로 측이 목사님에게 지출 내역 요구)</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 5번째 사건행 (b11:r6)</p> #}</div>
@@ -75,8 +75,8 @@
 {% event_responses 'E05' %}
 </section>
 {% event_discussion 'E05' %}
-</article>
-<article class="case-group direct-case" id="material-E07"><h2>E07 · 취득세 이의신청 관련 정기당회</h2>
+</article>{% endif %}
+{% if selected_key == 'E07' %}<article class="case-group direct-case" id="material-E07"><h2>E07 · 취득세 이의신청 관련 정기당회</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2025.1.25</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>정기당회: 취득세 이의신청에 당회원 전원 반대</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 7번째 사건행 (b11:r8)</p> #}</div>
@@ -89,8 +89,8 @@
 {% event_responses 'E07' %}
 </section>
 {% event_discussion 'E07' %}
-</article>
-<article class="case-group direct-case" id="material-E08"><h2>E08 · 이의신청서 제출 경과</h2>
+</article>{% endif %}
+{% if selected_key == 'E08' %}<article class="case-group direct-case" id="material-E08"><h2>E08 · 이의신청서 제출 경과</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2025.3.23~24</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>임시당회에 이의신청 건 미상정 → 다음 날 유지재단 이사장 날인을 받아 이의신청서 제출</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 8번째 사건행 (b11:r9)</p> #}</div>
@@ -103,8 +103,8 @@
 {% event_responses 'E08' %}
 </section>
 {% event_discussion 'E08' %}
-</article>
-<article class="case-group direct-case" id="material-E09"><h2>E09 · 카페의 재산세 부담 결의</h2>
+</article>{% endif %}
+{% if selected_key == 'E09' %}<article class="case-group direct-case" id="material-E09"><h2>E09 · 카페의 재산세 부담 결의</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2025.3.29</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>당회: 재산세 추징금 2,854,930원을 카페가 부담하기로 결의</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 9번째 사건행 (b11:r10)</p> #}</div>
@@ -117,8 +117,8 @@
 {% event_responses 'E09' %}
 </section>
 {% event_discussion 'E09' %}
-</article>
-<article class="case-group direct-case" id="material-E11"><h2>E11 · 전도사 사임 관련 제직회 발언</h2>
+</article>{% endif %}
+{% if selected_key == 'E11' %}<article class="case-group direct-case" id="material-E11"><h2>E11 · 전도사 사임 관련 제직회 발언</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2025.4.13</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>제직회에서 전도사 사임 경위에 관한 목사님 발언(후에 명예훼손으로 고소, 무죄)</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 11번째 사건행 (b11:r12)</p> #}</div>
@@ -132,8 +132,8 @@
 {% event_responses 'E11' %}
 </section>
 {% event_discussion 'E11' %}
-</article>
-<article class="case-group direct-case" id="material-E12"><h2>E12 · 임시제직회의 재산세 부담 변경 결의</h2>
+</article>{% endif %}
+{% if selected_key == 'E12' %}<article class="case-group direct-case" id="material-E12"><h2>E12 · 임시제직회의 재산세 부담 변경 결의</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2025.5.18</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>임시제직회: &quot;비상재정조치권&quot;을 근거로 재산세를 교회 재정에서 납부하기로 결의(20 대 16)</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 12번째 사건행 (b11:r13)</p> #}</div>
@@ -147,8 +147,8 @@
 {% event_responses 'E12' %}
 </section>
 {% event_discussion 'E12' %}
-</article>
-<article class="case-group direct-case" id="material-E13"><h2>E13 · 공개 당회 주보 공지</h2>
+</article>{% endif %}
+{% if selected_key == 'E13' %}<article class="case-group direct-case" id="material-E13"><h2>E13 · 공개 당회 주보 공지</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2025.5.25</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>주보에 &quot;당회를 공개하여 진행(모든 성도 참관 가능)&quot; 공지</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 13번째 사건행 (b11:r14)</p> #}</div>
@@ -161,8 +161,8 @@
 {% event_responses 'E13' %}
 </section>
 {% event_discussion 'E13' %}
-</article>
-<article class="case-group direct-case" id="material-E14"><h2>E14 · 장로 5인의 노회 고소</h2>
+</article>{% endif %}
+{% if selected_key == 'E14' %}<article class="case-group direct-case" id="material-E14"><h2>E14 · 장로 5인의 노회 고소</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2025.8.28</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>장로 5인이 목사님을 노회에 고소</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 14번째 사건행 (b11:r15)</p> #}</div>
@@ -175,8 +175,8 @@
 {% event_responses 'E14' %}
 </section>
 {% event_discussion 'E14' %}
-</article>
-<article class="case-group direct-case" id="material-E15"><h2>E15 · 1차 기소장 전달</h2>
+</article>{% endif %}
+{% if selected_key == 'E15' %}<article class="case-group direct-case" id="material-E15"><h2>E15 · 1차 기소장 전달</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2025.10.15</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>1차 기소장(당시 기소위원장)이 카톡으로 전달됨</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 15번째 사건행 (b11:r16)</p> #}</div>
@@ -189,8 +189,8 @@
 {% event_responses 'E15' %}
 </section>
 {% event_discussion 'E15' %}
-</article>
-<article class="case-group direct-case" id="material-E16"><h2>E16 · 장로 관련 고소의 노회 처리</h2>
+</article>{% endif %}
+{% if selected_key == 'E16' %}<article class="case-group direct-case" id="material-E16"><h2>E16 · 장로 관련 고소의 노회 처리</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2025.10.19</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>당회: 성도들이 장로 전원을 고소한 건은 노회에서 처리하기로 함</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 16번째 사건행 (b11:r17)</p> #}</div>
@@ -203,8 +203,8 @@
 {% event_responses 'E16' %}
 </section>
 {% event_discussion 'E16' %}
-</article>
-<article class="case-group direct-case" id="material-E17"><h2>E17 · 사역실행위원회 논의</h2>
+</article>{% endif %}
+{% if selected_key == 'E17' %}<article class="case-group direct-case" id="material-E17"><h2>E17 · 사역실행위원회 논의</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2025.12.6</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>사역실행위원회에서 카페·재정·CCTV·교역자 보직 등 논의</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 17번째 사건행 (b11:r18)</p> #}</div>
@@ -217,8 +217,8 @@
 {% event_responses 'E17' %}
 </section>
 {% event_discussion 'E17' %}
-</article>
-<article class="case-group direct-case" id="material-E18"><h2>E18 · 서리집사 임명안 표결</h2>
+</article>{% endif %}
+{% if selected_key == 'E18' %}<article class="case-group direct-case" id="material-E18"><h2>E18 · 서리집사 임명안 표결</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2025.12.21</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>임시당회: 신임 서리집사 임명안 3 대 5 부결</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 18번째 사건행 (b11:r19)</p> #}</div>
@@ -231,8 +231,8 @@
 {% event_responses 'E18' %}
 </section>
 {% event_discussion 'E18' %}
-</article>
-<article class="case-group direct-case" id="material-E19"><h2>E19 · 임시제직회 회계 선출 투표</h2>
+</article>{% endif %}
+{% if selected_key == 'E19' %}<article class="case-group direct-case" id="material-E19"><h2>E19 · 임시제직회 회계 선출 투표</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2025.12.28</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>임시제직회 회계 선출 투표 찬성 27·반대 33, 투표수가 재석을 초과해 무효 처리</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 19번째 사건행 (b11:r20)</p> #}</div>
@@ -246,8 +246,8 @@
 {% event_responses 'E19' %}
 </section>
 {% event_discussion 'E19' %}
-</article>
-<article class="case-group direct-case" id="material-E20"><h2>E20 · 목사의 기소위원회 출석·진술</h2>
+</article>{% endif %}
+{% if selected_key == 'E20' %}<article class="case-group direct-case" id="material-E20"><h2>E20 · 목사의 기소위원회 출석·진술</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2026.2.3</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>목사님 기소위원회 출석·진술</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 20번째 사건행 (b11:r21)</p> #}</div>
@@ -260,8 +260,8 @@
 {% event_responses 'E20' %}
 </section>
 {% event_discussion 'E20' %}
-</article>
-<article class="case-group direct-case" id="material-E21"><h2>E21 · 정기제직회 회계 선출</h2>
+</article>{% endif %}
+{% if selected_key == 'E21' %}<article class="case-group direct-case" id="material-E21"><h2>E21 · 정기제직회 회계 선출</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2026.3.15</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>정기제직회: 회계(재정팀장) 선출. 재석 56명 중 32명 투표·전원 찬성(장로 측 불참)</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 21번째 사건행 (b11:r22)</p> #}</div>
@@ -276,8 +276,8 @@
 {% event_responses 'E21' %}
 </section>
 {% event_discussion 'E21' %}
-</article>
-<article class="case-group direct-case" id="material-E23"><h2>E23 · 본건 기소장 송달</h2>
+</article>{% endif %}
+{% if selected_key == 'E23' %}<article class="case-group direct-case" id="material-E23"><h2>E23 · 본건 기소장 송달</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2026.6.7</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>본건 기소장(기소위원장 교체 후) 송달</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 23번째 사건행 (b11:r24)</p> #}</div>
@@ -290,8 +290,8 @@
 {% event_responses 'E23' %}
 </section>
 {% event_discussion 'E23' %}
-</article>
-<article class="case-group direct-case" id="material-E24"><h2>E24 · 성도 25인의 재항고 접수</h2>
+</article>{% endif %}
+{% if selected_key == 'E24' %}<article class="case-group direct-case" id="material-E24"><h2>E24 · 성도 25인의 재항고 접수</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2026.6.29</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>성도 25인 재항고 접수(기소위: 기소된 장로 1인 기소, 나머지 4인 불기소)</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 24번째 사건행 (b11:r25)</p> #}</div>
@@ -304,8 +304,8 @@
 {% event_responses 'E24' %}
 </section>
 {% event_discussion 'E24' %}
-</article>
-<article class="case-group direct-case" id="material-E25"><h2>E25 · 별도 계좌 개설과 적금 재예치</h2>
+</article>{% endif %}
+{% if selected_key == 'E25' %}<article class="case-group direct-case" id="material-E25"><h2>E25 · 별도 계좌 개설과 적금 재예치</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2026.7.2</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>교회 명의 별도 계좌 개설, OTP·공동인증서 재발급. 만기 적금 7억 5천만 원을 교회 명의 정기예금 7억·일반예금 5천만 원으로 재예치</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 25번째 사건행 (b11:r26)</p> #}</div>
@@ -323,8 +323,8 @@
 {% event_responses 'E25' %}
 </section>
 {% event_discussion 'E25' %}
-</article>
-<article class="case-group direct-case" id="material-E26"><h2>E26 · 목사의 답변서 제출</h2>
+</article>{% endif %}
+{% if selected_key == 'E26' %}<article class="case-group direct-case" id="material-E26"><h2>E26 · 목사의 답변서 제출</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2026.7.31</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>목사님 답변서 제출</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 26번째 사건행 (b11:r27)</p> #}</div>
@@ -337,8 +337,8 @@
 {% event_responses 'E26' %}
 </section>
 {% event_discussion 'E26' %}
-</article>
-<article class="case-group direct-case" id="material-E27"><h2>E27 · 기소장 변경 허가 신청</h2>
+</article>{% endif %}
+{% if selected_key == 'E27' %}<article class="case-group direct-case" id="material-E27"><h2>E27 · 기소장 변경 허가 신청</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2026.8.6</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>기소위원회, 기소장 변경 허가 신청(범죄사실 4건·증거 5건 추가). 8.11 목사님께 발송</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 27번째 사건행 (b11:r28)</p> #}</div>
@@ -358,8 +358,8 @@
 {% event_responses 'E27' %}
 </section>
 {% event_discussion 'E27' %}
-</article>
-<article class="case-group direct-case" id="material-E28"><h2>E28 · 총회 재판국의 재항고 심문</h2>
+</article>{% endif %}
+{% if selected_key == 'E28' %}<article class="case-group direct-case" id="material-E28"><h2>E28 · 총회 재판국의 재항고 심문</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2026.8.11</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>총회 재판국, 재항고 사건 심문(재정 운영 집중 질의, 원자료 제출 요구)</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 28번째 사건행 (b11:r29)</p> #}</div>
@@ -372,8 +372,8 @@
 {% event_responses 'E28' %}
 </section>
 {% event_discussion 'E28' %}
-</article>
-<article class="case-group direct-case" id="material-E29"><h2>E29 · 총회 재판국의 재항고 기각</h2>
+</article>{% endif %}
+{% if selected_key == 'E29' %}<article class="case-group direct-case" id="material-E29"><h2>E29 · 총회 재판국의 재항고 기각</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2026.8.28</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
 <div class="reading-excerpt"><p class="tag">원문 발췌 · 역할명 편집</p><p>총회 재판국, 성도 25인 재항고 기각</p>{# <p class="eyebrow">출처: church_dispute_strategy_memo.docx · 제1절 시간순 연표 29번째 사건행 (b11:r30)</p> #}</div>
@@ -386,8 +386,8 @@
 {% event_responses 'E29' %}
 </section>
 {% event_discussion 'E29' %}
-</article>
-<article class="case-group direct-case" id="material-E30"><h2>E30 · 변론종결과 노회 재판국 선고</h2>
+</article>{% endif %}
+{% if selected_key == 'E30' %}<article class="case-group direct-case" id="material-E30"><h2>E30 · 변론종결과 노회 재판국 선고</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2026.9.1 / 9.11</p>
 <p>9월 1일은 변론종결일, 9월 11일은 선고일로 구분합니다. 송달일·판결 확정 여부는 확인되지 않았습니다.</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
@@ -416,9 +416,9 @@
 {% event_responses 'E30' %}
 </section>
 {% event_discussion 'E30' %}
-</article>
-<h2 class="uncertain-heading">선후관계를 확정할 수 없는 사건·기간</h2><p>아래 사건은 다른 연표 항목과 발생 기간이 겹칩니다. 연표의 원래 날짜 표현을 유지하고, 기간 안의 정확한 선후관계를 단정하지 않습니다.</p>
-<article class="case-group direct-case" id="material-E06"><h2>E06 · 카페 사용 조사와 취득세 추징</h2>
+</article>{% endif %}
+
+{% if selected_key == 'E06' %}<article class="case-group direct-case" id="material-E06"><h2>E06 · 카페 사용 조사와 취득세 추징</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2024~2025초</p>
 <p class="notice">2024년부터 2025년 초라는 넓은 기간이 E04·E05·E07 등의 날짜와 겹칩니다. 기간 안의 정확한 선후관계는 원자료 확인이 필요합니다.</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
@@ -433,8 +433,8 @@
 {% event_responses 'E06' %}
 </section>
 {% event_discussion 'E06' %}
-</article>
-<article class="case-group direct-case" id="material-E10"><h2>E10 · 세무대리인 교체와 임시당회 요구</h2>
+</article>{% endif %}
+{% if selected_key == 'E10' %}<article class="case-group direct-case" id="material-E10"><h2>E10 · 세무대리인 교체와 임시당회 요구</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2025.4.12~17</p>
 <p class="notice">4월 12~17일의 경과 중 E11의 4월 13일과의 정확한 선후관계가 구분되지 않습니다. 기간 안의 정확한 선후관계는 원자료 확인이 필요합니다.</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
@@ -449,8 +449,8 @@
 {% event_responses 'E10' %}
 </section>
 {% event_discussion 'E10' %}
-</article>
-<article class="case-group direct-case" id="material-E22"><h2>E22 · 노회 질의·의견서와 헌법위원회 해석</h2>
+</article>{% endif %}
+{% if selected_key == 'E22' %}<article class="case-group direct-case" id="material-E22"><h2>E22 · 노회 질의·의견서와 헌법위원회 해석</h2>
 <section class="reading-area"><h3>① 날짜</h3><p>2026.4~6</p>
 <p class="notice">4~6월의 여러 절차가 E23·E24의 6월 사건과 겹치며 각 절차의 날짜가 모두 기재되어 있지는 않습니다. 기간 안의 정확한 선후관계는 원자료 확인이 필요합니다.</p>
 </section><section class="reading-area"><h3>② 사건 내용</h3><h4>문서에 기재된 경과 · 원자료 미대조</h4>
@@ -464,5 +464,5 @@
 {% event_responses 'E22' %}
 </section>
 {% event_discussion 'E22' %}
-</article>
+</article>{% endif %}
 <p class="reading-final-note">반론 자료를 별도로 확보하지 않았으며 상대방 입장을 추정하지 않습니다. 이후 상고 접수·확정·집행·진행 상황은 반영하지 않았습니다.</p>

@@ -1,0 +1,8 @@
+{% extends 'portal/base.html' %}
+{% block content %}
+{% include 'portal/reading_styles.html' %}
+<a href="/#timeline">사건 목록으로</a>
+{% if entry.uncertain %}<p class="notice">시점·선후관계 추가 확인이 필요한 사건입니다. 아래 이동은 목록 표시 순서이며 확정된 연대순을 뜻하지 않습니다.</p>{% endif %}
+{% include 'portal/direct_case_reading.html' %}
+<nav class="case-navigation" aria-label="사건 목록 표시 순서 이동"><a href="/#timeline">사건 목록으로</a>{% if previous %}<a href="{% url 'fixed_case' previous.key %}">이전 표시 사건 · {{ previous.key }}</a>{% endif %}{% if following %}<a href="{% url 'fixed_case' following.key %}">다음 표시 사건 · {{ following.key }}</a>{% endif %}</nav>
+{% endblock %}

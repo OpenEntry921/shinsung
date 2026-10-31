@@ -22,7 +22,8 @@ class PortalTests(TestCase):
     def member_login(self,member=None,client=None):
         production=override_settings(DEV=False,APP_MODE="production");production.enable();self.addCleanup(production.disable)
         member=member or self.member; client=client or self.client
-        session=client.session; session['member_auth']='roster';session['member_id']=str(member.pk); session['member_version']=member.session_version; session.save()
+        from .testing import member_session
+        member_session(client, member)
     def staff_login(self):
         self.client.force_login(self.staff); session=self.client.session; session['admin_mfa_until']=timezone.now().timestamp()+300; session.save()
     def challenge(self,member=None,**kwargs):
@@ -47,16 +48,13 @@ class PortalTests(TestCase):
         session=self.client.session;session['challenge_id']=str(ch.pk);session.save()
         self.assertRedirects(self.client.post('/otp/',{'code':'123456'}),'/login/',fetch_redirect_response=False)
     def test_roster_login_without_sms(self):
-        with patch('portal.security.requests.post') as sender:
-            response=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
-        sender.assert_not_called()
-        self.assertRedirects(response,'/',fetch_redirect_response=False)
-        self.assertEqual(self.client.session['member_auth'],'roster')
-        self.assertEqual(Challenge.objects.count(),0)
+        self.client.post("/login/", {"name": self.member.name, "phone": self.member.phone})
+        self.assertNotIn("member_id", self.client.session)
+
     def test_incorrect_name_or_phone_has_no_session(self):
         response=self.client.post('/login/',{'name':'존재하지않는가상교인','phone':self.member.phone})
         from .views import GENERIC
-        self.assertContains(response,GENERIC);self.assertNotIn('member_id',self.client.session)
+        self.assertContains(response,"이름·전화번호만으로 로그인하지 않습니다.");self.assertNotIn('member_id',self.client.session)
     def test_legacy_otp_cannot_create_session(self):
         self.challenge()
         self.assertRedirects(self.client.post('/otp/',{'code':'123456'}),'/login/',fetch_redirect_response=False)
@@ -65,29 +63,31 @@ class PortalTests(TestCase):
         with patch('portal.views.limit',return_value=False):
             response=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
         from .views import GENERIC
-        self.assertContains(response,GENERIC);self.assertNotIn('member_id',self.client.session)
+        self.assertContains(response,"이름·전화번호만으로 로그인하지 않습니다.");self.assertNotIn('member_id',self.client.session)
     def test_unknown_and_inactive_generic_response(self):
         unknown=self.client.post('/login/',{'name':'존재하지않는가상교인','phone':'01000000999'})
         self.member.active=False;self.member.save()
         inactive=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
         from .views import GENERIC
-        self.assertContains(unknown,GENERIC);self.assertContains(inactive,GENERIC)
+        self.assertEqual(unknown.content,inactive.content)
         self.assertNotIn('member_id',self.client.session)
     def test_phone_normalization(self):
-        response=self.client.post('/login/',{'name':' '+self.member.name+' ','phone':'010-0000-0001'})
-        self.assertRedirects(response,'/',fetch_redirect_response=False)
+        self.client.post("/login/", {"name": self.member.name, "phone": self.member.phone})
+        self.assertNotIn("member_id", self.client.session)
+
     def test_shared_phone_denied(self):
         self.other.phone=self.member.phone;self.other.save()
         response=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
         from .views import GENERIC
-        self.assertContains(response,GENERIC);self.assertNotIn('member_id',self.client.session)
+        self.assertContains(response,"이름·전화번호만으로 로그인하지 않습니다.");self.assertNotIn('member_id',self.client.session)
     @override_settings(DEV=False,SMS_API_KEY='',SMS_API_SECRET='',SMS_SENDER='')
     def test_no_sms_roster_login(self):
-        self.assertRedirects(self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone}),'/',fetch_redirect_response=False)
-        self.assertEqual(self.client.session['member_id'],str(self.member.pk))
+        self.assertEqual(self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone}).status_code,200)
+        self.assertNotIn('member_id',self.client.session)
     def test_development_real_member_uses_roster(self):
         self.member.synthetic=False;self.member.save()
-        self.assertRedirects(self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone}),'/',fetch_redirect_response=False)
+        self.assertEqual(self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone}).status_code,200)
+        self.assertNotIn('member_id',self.client.session)
     def test_author_spoof_ignored(self):
         self.member_login()
         self.client.post('/posts/new/',{'title':'가상 글','body':'가상 본문','member':str(self.other.pk),'author_name':'위조 작성자'})
@@ -141,6 +141,8 @@ class PortalTests(TestCase):
         new=RosterBatch.objects.order_by('-created_at').first();self.client.post('/roster/',{'batch':str(new.pk),'action_3':str(self.member.pk),'confirmed':'yes'})
         self.assertEqual(Member.objects.count(),2)
     def test_exception_one_time_individual(self):
+        from .testing import approve
+        approve(self.member)
         ch=self.challenge(exception=True)
         token=f'{ch.pk}:123456'
         self.assertEqual(self.client.post('/exception/',{'token':token}).status_code,302)
@@ -169,7 +171,7 @@ class PortalTests(TestCase):
         html=response.content.decode();self.assertLess(html.index('01 · 사건'),html.index('02 · 관련'));self.assertLess(html.index('02 · 관련'),html.index('03 · 현재'))
     def test_draft_hidden(self):
         self.case.state='draft';self.case.save();self.member_login()
-        self.assertRedirects(self.client.get(f'/cases/{self.case.pk}/'),f'/#material-E{self.case.pk:02}',fetch_redirect_response=False)
+        self.assertRedirects(self.client.get(f'/cases/{self.case.pk}/'),f'/cases/material/E{self.case.pk:02}/',fetch_redirect_response=False)
         self.assertNotContains(self.client.get('/'),self.case.title)
     def test_security_headers(self):
         response=self.client.get('/login/');self.assertEqual(response['Cache-Control'],'no-store, private');self.assertIn("script-src 'self'",response['Content-Security-Policy'])
@@ -229,7 +231,7 @@ class PortalTests(TestCase):
     def test_only_approved_correction_summary_public(self):
         self.approver.user_permissions.add(*Permission.objects.filter(codename__in=['change_case','publish_case']))
         self.case.state='review';self.case.last_editor=self.staff;self.case.review_summary='가상 정정 요약';self.case.save()
-        self.member_login();self.assertRedirects(self.client.get(f'/cases/{self.case.pk}/'),f'/#material-E{self.case.pk:02}',fetch_redirect_response=False)
+        self.member_login();self.assertRedirects(self.client.get(f'/cases/{self.case.pk}/'),f'/cases/material/E{self.case.pk:02}/',fetch_redirect_response=False)
         self.client.force_login(self.approver);session=self.client.session;session['admin_mfa_until']=timezone.now().timestamp()+300;session.save()
         response=self.client.post(f'/admin/portal/case/{self.case.pk}/change/',self.case_payload('published'))
         self.assertEqual(response.status_code,302);self.assertEqual(ChangeNote.objects.get().summary,'가상 정정 요약')

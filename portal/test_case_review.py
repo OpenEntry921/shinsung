@@ -30,7 +30,8 @@ class CaseReviewTests(TestCase):
             case.state='published';case.reviewer=self.reviewer;case.save()
     def login_member(self):
         production=override_settings(DEV=False,APP_MODE="production");production.enable();self.addCleanup(production.disable)
-        session=self.client.session;session['member_auth']='roster';session['member_id']=str(self.member.pk);session['member_version']=self.member.session_version;session.save()
+        from .testing import member_session
+        member_session(self.client, self.member)
     def login_staff(self,user=None,permissions=()):
         user=user or self.editor
         user.user_permissions.add(*Permission.objects.filter(codename__in=permissions))
