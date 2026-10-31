@@ -16,6 +16,7 @@ class Member(models.Model):
     phone = models.CharField('전화번호', max_length=20)
     active = models.BooleanField('활성', default=True)
     synthetic = models.BooleanField(default=False)
+    legacy_operator = models.BooleanField('기존 운영자 로그인 허용 (개별 확인 후 지정)', default=False)
     session_version = models.PositiveIntegerField(default=1)
     label = models.CharField('비민감 구분 표기', max_length=40, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -23,9 +24,12 @@ class Member(models.Model):
     def save(self,*args,**kwargs):
         if self.pk:
             old = Member.objects.filter(pk=self.pk).first()
-            if old and (old.phone != self.phone or old.active != self.active):
+            if old and (old.phone != self.phone or old.active != self.active or old.legacy_operator != self.legacy_operator):
                 self.session_version = old.session_version + 1
         super().save(*args,**kwargs)
+    class Meta:
+        permissions = [('manage_legacy_operator', '기존 운영자 로그인 권한 지정·철회')]
+
     @property
     def display_label(self):
         if self.label: return self.label

@@ -40,7 +40,7 @@ class TrackedAdmin(admin.ModelAdmin):
 
 class MemberForm(ModelForm):
     reason=__import__('django').forms.CharField(label='변경 사유 (연락처·활성 상태 변경 시 필수)')
-    class Meta: model=Member; fields=['name','phone','active','label']
+    class Meta: model=Member; fields=['name','phone','active','label','legacy_operator']
     def clean_phone(self):
         from .security import phone
         import re
@@ -52,9 +52,22 @@ class MemberAdmin(TrackedAdmin):
     form=MemberForm
     list_display=['id','name','active','label','updated_at']
     search_fields=['name']
+    def get_form(self, request, obj=None, **kwargs):
+        if not request.user.has_perm('portal.manage_legacy_operator'):
+            kwargs['exclude'] = list(kwargs.get('exclude') or []) + list(self.get_readonly_fields(request, obj)) + ['legacy_operator']
+        return super().get_form(request, obj, **kwargs)
     readonly_fields=['id','session_version','created_at','updated_at','synthetic']
     def has_add_permission(self,request): return False
     def save_model(self,request,obj,form,change):
+        # A roster editor cannot grant operator access by forging POST fields.
+        old = Member.objects.get(pk=obj.pk)
+        if old.legacy_operator != obj.legacy_operator:
+            if not request.user.has_perm('portal.manage_legacy_operator'):
+                raise PermissionDenied
+            Revision.objects.create(target=f'member:{obj.pk}', actor=str(request.user.pk),
+                body={'legacy_operator': old.legacy_operator})
+            Audit.objects.create(actor=str(request.user.pk), action='operator_grant' if obj.legacy_operator else 'operator_revoke',
+                target=str(obj.pk), reason=form.cleaned_data['reason'])
         # Do not copy roster names or phone numbers into audit/history records.
         obj.save()
         Audit.objects.create(actor=str(request.user.pk),action='member_change',target=str(obj.pk),reason=form.cleaned_data['reason'])

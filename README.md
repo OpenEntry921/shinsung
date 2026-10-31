@@ -13,7 +13,7 @@ APP_MODE=development .venv/bin/python manage.py test
 APP_MODE=development sh scripts/start-production.sh
 ```
 
-개발은 `APP_MODE=development`, 운영은 `APP_MODE=production`을 사용합니다. 시작 시 샘플 교인이나 운영 데이터를 자동 생성하지 않습니다. 기존 교인도 새 동의·교인 대조·별도 본인 확인 및 승인 전에는 열람할 수 없습니다. 이름·전화번호 로그인은 비활성화했습니다. 기존 체크아웃을 사용하며 별도 Git worktree를 만들지 않습니다.
+개발은 `APP_MODE=development`, 운영은 `APP_MODE=production`을 사용합니다. 시작 시 샘플 교인이나 운영 데이터를 자동 생성하지 않습니다. 서버에서 개별 지정된 기존 운영자는 종전 이름·전화번호 로그인으로 내부 화면과 본인 댓글에 접근합니다. 일반 교인·신규 이용자의 동의·확인·승인 요건은 유지합니다. [로그인 복구·운영 반영 순서](docs/LOGIN_RECOVERY.md)를 확인하세요. 기존 체크아웃을 사용하며 별도 Git worktree를 만들지 않습니다.
 
 [통합 개편 검토·운영 전 설정](docs/INTEGRATION_REVIEW.md)을 먼저 확인하세요. 가입 접수는 운영 주체·연락처·보유기간·교회 수신 창구가 모두 확정되기 전 차단됩니다. 개인정보를 자동 전송하지 않습니다.
 

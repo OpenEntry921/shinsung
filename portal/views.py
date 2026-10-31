@@ -22,7 +22,29 @@ def policy(request):
     from .access import policy_config
     return render(request, 'portal/policy.html', dict(policy_config(), operator_name=settings.OPERATOR_NAME, operator_contact=settings.OPERATOR_CONTACT))
 def login(request):
-    return render(request, 'portal/login.html')
+    if request.member:
+        return redirect('/')
+    message = ''
+    if request.method == 'POST':
+        message = GENERIC
+        name = request.POST.get('name', '').strip()[:80]
+        number = phone(request.POST.get('phone', ''))[:20]
+        allowed = limit('ip:' + request.META.get('REMOTE_ADDR', ''), 20, 3600)
+        if allowed: allowed = limit('phone-hour:' + number, 5, 3600)
+        if allowed and name and number:
+            with transaction.atomic():
+                matches = Member.objects.select_for_update().filter(name=name, phone=number, active=True)
+                member = matches.first() if matches.count() == 1 else None
+                if (member and member.legacy_operator
+                        and Member.objects.filter(phone=number, active=True).count() == 1):
+                    request.session.flush()
+                    rotate_token(request)
+                    request.session['member_id'] = str(member.pk)
+                    request.session['member_version'] = member.session_version
+                    request.session['member_auth'] = 'roster'
+                    request.session.set_expiry(3600)
+                    return redirect('/')
+    return render(request, 'portal/login.html', {'message': message})
 
 @require_POST
 def otp(request):
