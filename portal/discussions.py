@@ -103,10 +103,13 @@ def comment_write(request, key, pk=None):
 
 def detail_context(request, key, discussion=None):
     from django.http import Http404
-    from .reading_registry import reading_entries
-    entries = reading_entries()
+    from .reading_registry import entries_for
+    from .timeline_sources import document_links
     if key not in READING_KEYS: raise Http404
-    index = next(i for i, e in enumerate(entries) if e['key'] == key)
-    return dict(discussion or discussion_context(request, key), selected_key=key,
-                entry=entries[index], previous=entries[index-1] if index else None,
-                following=entries[index+1] if index+1 < len(entries) else None)
+    entries=entries_for(key)
+    index=next(i for i,e in enumerate(entries) if e['key']==key)
+    entry=entries[index]
+    return dict(discussion or discussion_context(request,key),selected_key=key,
+                entry=entry,previous=entries[index-1] if index else None,
+                following=entries[index+1] if index+1<len(entries) else None,
+                document_links=document_links(entry.get('sources',())) if request.member else {})

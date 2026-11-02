@@ -72,11 +72,19 @@ def cases(request):
     entries = reading_entries()
     for entry in entries: entry['count'] = counts.get(entry['key'], 0)
     return render(request, 'portal/cases.html', {
-        'dated_entries': [e for e in entries if not e['uncertain']],
-        'uncertain_entries': [e for e in entries if e['uncertain']],
+        'timeline_entries': entries,
         'dashboard_groups': [(label, ProgressRecord.objects.filter(category=kind, published=True).order_by('-basis_on', '-updated_at')) for kind, label in ProgressRecord.CATEGORIES],
         'roadmap': [(n, title, RoadmapStage.objects.filter(step=n).first()) for n, title in RoadmapStage.STEPS],
     })
+
+
+def legacy_cases(request):
+    from .reading_registry import legacy_reading_entries
+    from django.db.models import Count
+    counts=dict(CaseComment.objects.filter(hidden=False,deleted_at=None).values('reading_key').annotate(n=Count('pk')).values_list('reading_key','n'))
+    entries=legacy_reading_entries()
+    for entry in entries: entry['count']=counts.get(entry['key'],0)
+    return render(request,'portal/legacy_cases.html',{'entries':entries})
 
 
 def case_detail(request, pk=None, key=None):

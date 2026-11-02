@@ -66,7 +66,8 @@ class ReviewedMaterialTests(TestCase):
         self.run_import(apply=True,publish=True);self.member_session()
         response=self.client.get('/')
         self.assertNotContains(response,'가상 원문 발췌')
-        self.assertContains(response,'/cases/material/E01/')
+        self.assertContains(response,'/cases/material/T01/')
+        self.assertEqual(self.client.get('/cases/material/E01/').status_code,200)
         self.assertNotContains(response,'검색 조건 초기화')
     def test_original_guest_inactive_and_direct_link_protection(self):
         self.run_import(apply=True,publish=True);case=Case.objects.get();doc=Document.objects.get()
