@@ -17,7 +17,7 @@
 | `portal/reading_registry.py` | 기존 E30과 신규 T70의 안정적인 번호·메타데이터 분리 |
 | `portal/timeline_links.py` | 기존/새 사건 관련 참조와 명시적 원자료 ID 연결 설정 |
 | `portal/timeline_sources.py` | 기존 게시·가림 승인·파일 존재·권한 조건을 만족하는 자료만 연결 |
-| `portal/templates/portal/integrated_case_reading.html` | 실제 70개 본문. 현재 PUBLIC 상태여서 로컬 비추적 파일로 보호 |
+| `portal/templates/portal/integrated_case_reading.html` | 실제 70개 본문. 최초 PUBLIC 상태에서는 비추적 파일로 보호했고 사용자 Private 전환 후 제출에 포함 |
 | `scripts/prepare_integrated_timeline.py` | MD의 사건·네 필드·출처 검증 및 결정적인 HTML 변환. DB·네트워크 접근 없음 |
 | `portal/views.py`, `portal/discussions.py`, `config/urls.py` | 통합 목록·상세 선택·기존 보존 목록·이전/다음 연결 |
 | `cases.html`, `reading_detail.html`, `timeline_item.html`, `legacy_cases.html` | 기존 디자인과 탐색을 재사용하고 MD 표시 순서를 보존 |
@@ -64,7 +64,7 @@ MD에 포함된 날짜·판본 확인 항목 13개를 별도 비공개 검토 �
 
 ## 공개 범위 확인과 제출 이력
 
-최초 구현 당시 GitHub 웹 메타데이터의 `repository_public=true`를 확인하여 실제 본문 HTML을 `.git/info/exclude`로 보호하고 커밋·푸시를 보류했습니다. 2026-11-03 사용자가 Private 전환과 PR 생성을 요청했습니다. 비인증 웹 접근은 404로 바뀌었고 기존 Git 연결에서는 저장소 접근을 확인했습니다. GitHub API 조회는 이 작업 환경에서 차단돼 있습니다. 이후 커밋·원격 업로드·PR의 실제 성공 여부는 최종 작업 보고를 따릅니다. 다른 코드만 먼저 올려 불완전한 빌드를 배포하지 마세요. 현재 로컬 변경과 비추적 본문을 함께 보존합니다.
+최초 구현 당시 GitHub 웹 메타데이터의 `repository_public=true`를 확인하여 실제 본문 HTML을 `.git/info/exclude`로 보호하고 커밋·푸시를 보류했습니다. 2026-11-03 사용자가 Private 전환과 PR 생성을 요청했습니다. 비인증 웹 접근은 404로 바뀌었고 기존 Git 연결에서는 저장소 접근을 확인했습니다. GitHub API 조회는 이 작업 환경에서 차단돼 있습니다. 이후 커밋·원격 업로드·PR의 실제 성공 여부는 최종 작업 보고를 따릅니다. 다른 코드만 먼저 올려 불완전한 빌드를 배포하지 마세요. 최초 구현 단계에서는 로컬 변경과 비추적 본문을 함께 보존했고, 사용자 Private 전환 요청 후 실제 본문을 제출에 포함했습니다.
 
 원문 MD·비공개 PDF·회원 DB·명부·비밀값은 커밋하지 않습니다. **저장소를 Private으로 전환하고 확인한 뒤** 실제 본문 템플릿과 이번 변경 전체를 검토하여 사용자 본인이 커밋·푸시할 수 있습니다. 공개 여부를 확인하지 않은 상태에서 ignore를 강제로 해제하지 마세요. 사이트 로그인 제한은 GitHub 소스 공개를 막지 못합니다.
 
