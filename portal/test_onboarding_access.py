@@ -48,7 +48,7 @@ from django.db.migrations.executor import MigrationExecutor
 class AccessMigrationTests(TransactionTestCase):
     def test_existing_comment_reply_revision_request_and_member_survive(self):
         old=('portal','0010_member_discussions')
-        new=('portal','0013_alter_member_options_member_legacy_operator')
+        new=('portal','0014_integrated_timeline_keys')
         executor=MigrationExecutor(connection);executor.migrate([old])
         try:
             apps=executor.loader.project_state([old]).apps

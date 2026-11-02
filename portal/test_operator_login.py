@@ -29,7 +29,7 @@ class OperatorLoginTests(TestCase):
                 home=self.client.get('/')
                 self.assertContains(home, '공동 상황판')
                 self.assertContains(home, '해결 절차 로드맵')
-                self.assertEqual(home.content.count(b'class="timeline-card"'),30)
+                self.assertEqual(home.content.count(b'class="timeline-card"'),70)
                 self.assertRedirects(self.client.get('/login/'), '/', fetch_redirect_response=False)
                 for n in range(1,31):
                     detail=self.client.get(f'/cases/material/E{n:02}/')

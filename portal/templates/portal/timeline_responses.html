@@ -1,0 +1,2 @@
+<h4>추가 접수·검토된 반론</h4>
+{% for response in responses %}<div class="received-response"><p>추가 접수 후 개인정보 검토·공개 승인한 발췌 · {{ response.created_at }}</p><p>{{ response.public_excerpt }}</p></div>{% empty %}<p>이 사건 페이지에 별도로 추가 접수해 공개 승인한 반론은 없습니다. 위 MD에 기재된 양측 설명과 구분합니다.</p>{% endfor %}

@@ -1,1 +1,1 @@
-<li><a class="timeline-card" href="{% url 'fixed_case' entry.key %}"><span class="event-date">{{ entry.date }}</span><span>{{ entry.key }}</span><h3>{{ entry.title }}</h3><span>상세 보기 · 의견 {{ entry.count }}개</span></a></li>
+<li><a class="timeline-card" href="{% url 'fixed_case' entry.key %}"><span class="event-date">{{ entry.date }}</span><span>{{ entry.key }}</span><h3>{{ entry.title }}</h3>{% if entry.category %}<p class="eyebrow">{{ entry.category }}</p>{% endif %}<span>상세 보기 · 의견 {{ entry.count }}개</span></a></li>

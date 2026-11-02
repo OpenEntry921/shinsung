@@ -15,9 +15,10 @@
 <section aria-labelledby="roadmap"><h2 id="roadmap">해결 절차 로드맵</h2>
 <p>사건별 진행 단계는 다를 수 있습니다. 마지막 단계는 대응 필요성과 방법을 검토하는 단계이며 소송이나 외부 공개로 자동 연결되지 않습니다.</p>
 <ol class="roadmap">{% for number, title, stage in roadmap %}<li class="card"><h3>{{ title }}</h3><p>{{ stage.get_status_display|default:'진행 상태 등록 전' }}</p><p>{% if stage.explanation %}{{ stage.explanation }}{% elif number == 1 %}자료의 출처와 날짜, 확인할 사실을 정리합니다.{% elif number == 2 %}양측의 설명·반론과 교인 의견을 같은 기준으로 받습니다.{% elif number == 3 %}확인할 질문과 필요한 시정 내용을 구체적으로 정리합니다.{% elif number == 4 %}답변의 근거를 살펴보고 확인된 이행을 기록합니다.{% else %}남은 쟁점과 조정·교단 절차·법적 대응의 필요성을 검토합니다.{% endif %}</p>{% if stage %}<small>기준일 {{ stage.basis_on }}</small>{% endif %}</li>{% endfor %}</ol></section>
-<section aria-labelledby="timeline"><h2 id="timeline">사건 타임라인</h2><p>E01~E30은 열람용 자료 번호이며 공식 사건번호가 아닙니다. 날짜는 기존 자료의 표현을 유지합니다.</p>
-<ol class="timeline">{% for entry in dated_entries %}{% include 'portal/timeline_item.html' %}{% endfor %}</ol>
-<h3>시점·선후관계 추가 확인이 필요한 사건</h3><p>아래 사건은 발생 기간이 겹치거나 개별 시점이 불명확합니다. 확정 연대순으로 배치하지 않습니다.</p>
-<ul class="uncertain-list">{% for entry in uncertain_entries %}{% include 'portal/timeline_item.html' %}{% endfor %}</ul></section>
+<section aria-labelledby="timeline"><h2 id="timeline">사건 타임라인</h2>
+<p>장로 측·목사 측·성도 측의 관련 사건을 날짜순으로 함께 정리했습니다. 당사자의 주장과 기관의 판단을 구분했으며, 자료가 확인되지 않은 후속 절차는 별도로 표시했습니다. 정리 기준일은 2026년 11월 2일입니다.</p>
+<p>T01~T70은 열람용 식별자이며 공식 사건번호가 아닙니다. 첨부 MD의 01~70번 표시 순서를 유지합니다. 날짜 표현은 원문 그대로이며, 반복·기간·미확인 일자를 임의로 확정하거나 다시 정렬하지 않습니다. 사건 구분은 법적으로 사건들이 병합됐다는 의미가 아닙니다.</p>
+<ol class="timeline">{% for entry in timeline_entries %}{% include 'portal/timeline_item.html' %}{% endfor %}</ol>
+<p><a href="{% url 'legacy_cases' %}">기존 정리 E01~E30과 당시 의견 보기</a> · 기존 게시글·댓글은 원래 사건번호에 그대로 남습니다.</p></section>
 <p><a href="/policy/">개인정보·교인 확인 및 운영 안내</a></p>
 {% endblock %}

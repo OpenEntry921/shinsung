@@ -1,0 +1,3 @@
+{% extends 'portal/base.html' %}{% block content %}{% include 'portal/reading_styles.html' %}
+<h1>기존 사건 정리와 연결 기록</h1><p>기존 E01~E30의 본문·URL·댓글·게시글 연결은 원래 번호로 보존합니다. 새 통합 타임라인의 T01~T70과 별개이며 자동 병합·이동하지 않습니다. 시점·선후관계가 불분명했던 항목도 기존 표기와 목록 순서를 유지합니다.</p><p><a href="/#timeline">통합 사건 타임라인으로</a></p>
+<ul class="uncertain-list">{% for entry in entries %}{% include 'portal/timeline_item.html' %}{% endfor %}</ul>{% endblock %}
