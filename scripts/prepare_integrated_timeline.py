@@ -46,6 +46,15 @@ def parse_document(text, *, expected_count=ENTRY_COUNT):
     entries=[]
     for i,match in enumerate(matches):
         body=timeline[match.end():matches[i+1].start() if i+1<len(matches) else len(timeline)].strip()
+        parts=re.split(r'^#### (.+)\n',body,flags=re.M)
+        body=parts[0]
+        supplements=[]
+        for heading,content in zip(parts[1::2],parts[2::2]):
+            if not (re.fullmatch(r'(?:우리의 의견 초안|관련 의견 안내) OP[0-9]{2}',heading)
+                    or heading=='사용자 제공 경과와 추가 확인'):
+                raise ValueError('지원하지 않는 사건 보조 구역입니다.')
+            if not content.strip(): raise ValueError('빈 사건 보조 구역입니다.')
+            supplements.append({'heading':heading,'paragraphs':re.split(r'\n\s*\n',content.strip())})
         category=re.search(r'^사건 구분: (.+)$',body,re.M)
         labels=list(re.finditer(r'^\*\*([^\n]+)\*\*: ',body,re.M))
         if not category or [m[1] for m in labels]!=list(FIELDS): raise ValueError('사건 필드 구성을 확인하세요.')
@@ -56,6 +65,7 @@ def parse_document(text, *, expected_count=ENTRY_COUNT):
             end=labels[j+1].start() if j+1<len(labels) else reference.start()
             entry[FIELDS[j]]=body[label.end():end].strip()
             if not entry[FIELDS[j]]: raise ValueError('빈 필드가 있습니다.')
+        entry['supplements']=supplements
         entry['references']=reference[1]
         refs=[]
         for part in re.split(r'[,;；]\s*(?='+SOURCE_CODE+r'\b)',reference[1]):
@@ -72,6 +82,12 @@ def parse_document(text, *, expected_count=ENTRY_COUNT):
             refs.append({'code':ref[1],'locator':ref[3],'kind':ref[2],**sources[ref[1]]})
         entry['source_refs']=refs
         entries.append(entry)
+    opinions=[part['heading'].rsplit(' ',1)[1] for entry in entries for part in entry['supplements'] if part['heading'].startswith('우리의 의견 초안 ')]
+    if len(opinions)!=len(set(opinions)): raise ValueError('중복 의견 초안 식별자입니다.')
+    for entry in entries:
+        for part in entry['supplements']:
+            if part['heading'].startswith('관련 의견 안내 ') and part['heading'].rsplit(' ',1)[1] not in opinions:
+                raise ValueError('연결된 의견 초안이 없습니다.')
     return entries,sources
 
 
@@ -91,7 +107,20 @@ def render(entries, digest):
                           '<p class="eyebrow">PDF 쪽수는 봉투·표지를 포함해 파일 처음부터 센 쪽수이며 문서 안의 인쇄 쪽수와 다를 수 있습니다.</p>','<ul class="source-list">']
                 for ref in entry['source_refs']:
                     lines += ['<li data-source="'+ref['code']+'">'+escape(ref['code']+' · '+Path(ref['filename']).name+' · '+ref['kind']+' '+ref['locator'])+" {% timeline_document '"+ref['code']+"' %}</li>"]
-                lines += ['</ul>',"{% timeline_responses '"+key+"' %}"]
+                lines += ['</ul>']
+                if entry.get('supplements'):
+                    lines += ['<div class="opinion-drafts"><p class="eyebrow">사용자 의견 초안 · 항목별 검토 전. 공식 판단이나 실제 제출된 성도 댓글이 아닙니다. 원자료를 새로 대조한 내용이 아닙니다.</p>']
+                    for part in entry['supplements']:
+                        opinion=re.search(r'OP[0-9]{2}$',part['heading'])
+                        primary=part['heading'].startswith('우리의 의견 초안 ')
+                        attr=(' data-opinion="'+opinion[0]+'"') if primary else ''
+                        lines += ['<div class="opinion-draft"'+attr+'><h4>'+escape(part['heading'])+'</h4>']
+                        for paragraph in part['paragraphs']:
+                            safe=re.sub(r'\*\*([^*]+)\*\*',r'<strong>\1</strong>',escape(paragraph))
+                            lines += ['<p>'+safe.replace('\n','<br>')+'</p>']
+                        lines += ['</div>']
+                    lines += ['</div>']
+                lines += ["{% timeline_responses '"+key+"' %}"]
             lines += ['</section>']
         lines += ["{% event_discussion '"+key+"' %}",'</article>','{% endif %}']
     return '\n'.join(lines)+'\n'
