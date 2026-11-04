@@ -4,27 +4,45 @@ import hashlib
 import html
 import re
 from pathlib import Path
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parent.parent))
+from portal.timeline_revision import BASIS, ENTRY_COUNT, PREVIOUS_ENTRY_COUNT, OLD_TO_REVISED, NEW_NUMBER_KEYS, KEY_BY_NUMBER
 
 FIELDS = ('날짜','경과','관련 규정','쟁점')
-SOURCE_CODE = r'[A-E][0-9]{2}(?:변경)?'
+SOURCE_CODE = r'[A-ES][0-9]{2}(?:변경)?'
 
 
-def parse_document(text):
+def parse_document(text, *, expected_count=ENTRY_COUNT):
+    if expected_count == ENTRY_COUNT:
+        if not re.search(r'^검토 기준일 '+BASIS+r'\s*$',text,re.M): raise ValueError('11월 4일 기준 개정본을 확인하세요.')
+        mapping_text=text.split('### 기존 번호와 개정 번호 대응',1)
+        if len(mapping_text)!=2: raise ValueError('기존 번호와 개정 번호 대응표가 필요합니다.')
+        rows=re.findall(r'^\| ([^|]+?) \| ([0-9]{2}) \| ([^|]+?) \|$',mapping_text[1],re.M)
+        old_rows=[(int(old),int(new)) for old,new,_ in rows if old.isdecimal()]
+        additions=[int(new) for old,new,_ in rows if not old.isdecimal()]
+        if (len(old_rows)!=PREVIOUS_ENTRY_COUNT or dict(old_rows)!=OLD_TO_REVISED
+                or len(additions)!=len(NEW_NUMBER_KEYS) or set(additions)!=set(NEW_NUMBER_KEYS)):
+            raise ValueError('식별자를 보존할 수 없는 번호 대응표입니다. 검토가 필요합니다.')
+
     if '{{' in text or '{%' in text or '{#' in text:
         raise ValueError('원문에 템플릿 구문이 포함돼 있습니다. 수동 검토가 필요합니다.')
     sections = text.split('## 통합 사건 열람\n',1)
     if len(sections)!=2: raise ValueError('통합 사건 열람 절을 확인하세요.')
     timeline = re.split(r'^## ',sections[1],maxsplit=1,flags=re.M)[0]
     matches = list(re.finditer(r'^### ([0-9]{2}) (.+)\n',timeline,re.M))
-    if [int(m[1]) for m in matches] != list(range(1,71)):
-        raise ValueError('01~70번의 누락·중복·순서를 확인하세요.')
+    if [int(m[1]) for m in matches] != list(range(1,expected_count+1)):
+        raise ValueError('사건 번호의 누락·중복·순서를 확인하세요.')
     bibliography = text.split('## 근거 자료 목록\n',1)[1]
     sources = {}
     for match in re.finditer(r'^- \*\*('+SOURCE_CODE+r')\*\*: (.+) — ([0-9]+)쪽\s*$',bibliography,re.M):
         code,filename,pages=match.groups()
         if code in sources: raise ValueError('중복 자료 코드')
         sources[code] = {'filename':filename, 'pages':int(pages)}
-    if len(sources)!=28: raise ValueError('근거 자료 목록 28개를 확인하세요.')
+    if expected_count == ENTRY_COUNT:
+        summary=re.search(r'^- \*\*S01\*\*: (\S+\.docx) — (.+)$',bibliography,re.M)
+        if not summary: raise ValueError('S01 정리본의 자료명과 설명이 필요합니다.')
+        sources['S01']={'filename':summary[1],'pages':None,'description':summary[2]}
+    if len(sources)!=(29 if expected_count==ENTRY_COUNT else 28): raise ValueError('자료 목록 수량을 확인하세요.')
     entries=[]
     for i,match in enumerate(matches):
         body=timeline[match.end():matches[i+1].start() if i+1<len(matches) else len(timeline)].strip()
@@ -33,14 +51,19 @@ def parse_document(text):
         if not category or [m[1] for m in labels]!=list(FIELDS): raise ValueError('사건 필드 구성을 확인하세요.')
         reference=re.search(r'^근거 자료: (.+)$',body,re.M)
         if not reference: raise ValueError('사건 근거 자료가 없습니다.')
-        entry={'key':'T'+match[1], 'number':match[1], 'title':match[2], 'category':category[1]}
+        entry={'key':KEY_BY_NUMBER[int(match[1])] if expected_count==ENTRY_COUNT else 'T'+match[1], 'number':match[1], 'title':match[2], 'category':category[1]}
         for j,label in enumerate(labels):
             end=labels[j+1].start() if j+1<len(labels) else reference.start()
             entry[FIELDS[j]]=body[label.end():end].strip()
             if not entry[FIELDS[j]]: raise ValueError('빈 필드가 있습니다.')
         entry['references']=reference[1]
         refs=[]
-        for part in re.split(r',\s*(?='+SOURCE_CODE+r'\b)',reference[1]):
+        for part in re.split(r'[,;；]\s*(?='+SOURCE_CODE+r'\b)',reference[1]):
+            summary=re.fullmatch(r'(S01)\s+(.+)',part)
+            if summary:
+                if 'S01' not in sources or re.search(r'(?:PDF|DOCX)\s*[0-9]+쪽',summary[2]): raise ValueError('S01에 확인되지 않은 쪽수를 쓰지 마세요.')
+                refs.append({'code':'S01','locator':summary[2],'kind':'2차 정리본',**sources['S01']})
+                continue
             ref=re.fullmatch('('+SOURCE_CODE+r')\s+(PDF|JPG)\s+(.+)',part)
             if not ref or ref[1] not in sources: raise ValueError('출처 코드나 형식을 확인하세요.')
             if Path(sources[ref[1]]['filename']).suffix.lower()!='.'+ref[2].lower(): raise ValueError('자료 형식과 목록 불일치')
@@ -54,12 +77,12 @@ def parse_document(text):
 
 def render(entries, digest):
     escape=lambda value: html.escape(value,quote=True)
-    lines=['{% load discussion_tags timeline_tags %}', '{# Source MD SHA-256: '+digest+'; original PDFs were not supplied for this implementation. #}']
+    lines=['{% load discussion_tags timeline_tags %}', '{# Source MD SHA-256: '+digest+'; original PDFs and the S01 DOCX were not supplied for this implementation. #}']
     for entry in entries:
         key=entry['key'];codes=' '.join(dict.fromkeys(ref['code'] for ref in entry['source_refs']))
         lines += ["{% if selected_key == '"+key+"' %}",
-            '<article class="case-group direct-case" id="material-'+key+'" data-key="'+key+'" data-title="'+escape(entry['title'])+'" data-date="'+escape(entry['날짜'])+'" data-category="'+escape(entry['category'])+'" data-sources="'+codes+'">',
-            '<h2>'+key+' · '+escape(entry['title'])+'</h2>', '<p class="eyebrow">사건 구분: '+escape(entry['category'])+'</p>']
+            '<article class="case-group direct-case" id="material-'+key+'" data-key="'+key+'" data-number="'+entry['number']+'" data-title="'+escape(entry['title'])+'" data-date="'+escape(entry['날짜'])+'" data-category="'+escape(entry['category'])+'" data-sources="'+codes+'">',
+            '<h2>'+entry['number']+' · '+escape(entry['title'])+'</h2>', '<p class="eyebrow">사건 구분: '+escape(entry['category'])+'</p>']
         for i,field in enumerate(FIELDS):
             lines += ['<section class="reading-area" data-area="'+field+'"><h3>'+('①','②','③','④')[i]+' '+field+'</h3>',
                       '<p data-content="'+field+'">'+escape(entry[field])+'</p>']

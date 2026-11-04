@@ -20,18 +20,21 @@ def fictional_md():
     # Exactly 28 fictional catalog entries; preserve distinct A11 vs A11변경.
     codes=[f'A{i:02}' for i in range(1,26)]+['A11변경','B01','C02']
     entries=[]
-    for i in range(1,71):
+    for i in range(1,73):
         code='A11변경' if i%2 else 'A11'
         entries.append(f'### {i:02} 가상 제목 {i} & 검토\n\n사건 구분: 가상 분류\n\n**날짜**: 가상 기간 {i}\n\n**경과**: 가상 주장 <script>fictional()</script>\n\n**관련 규정**: 가상 설명 · 공식 원문 확인 필요\n\n**쟁점**: 가상 미확인 사항\n\n근거 자료: {code} PDF 1~2쪽\n')
     catalog='\n'.join(f'- **{code}**: 가상 경로/{code}.{ "jpg" if code=="C02" else "pdf"} — 2쪽' for code in codes)
-    return '# 가상 검증\n\n## 통합 사건 열람\n\n'+'\n'.join(entries)+'\n## 근거 자료 목록\n\n'+catalog+'\n'
+    from .timeline_revision import OLD_TO_REVISED
+    mapping='\n'.join(f'| {old:02} | {new:02} | 유지 |' for old,new in OLD_TO_REVISED.items())
+    mapping+='\n| 신규 기사 | 41 | 신규 추가 |\n| 신규 탄원 준비 | 72 | 신규 추가 |'
+    return '# 가상 검증\n\n검토 기준일 2026년 11월 4일\n\n## 통합 사건 열람\n\n'+'\n'.join(entries)+'\n## 근거 자료 목록\n\n'+catalog+'\n- **S01**: fictional.docx — 가상 2차 정리본\n\n## 개정 내역\n\n### 기존 번호와 개정 번호 대응\n\n'+mapping+'\n'
 
 
 class ConversionTests(SimpleTestCase):
     def test_deterministic_exact_fields_order_sources_and_escaping(self):
         source=fictional_md();entries,catalog=parse_document(source)
         self.assertEqual(tuple(e['key'] for e in entries),TIMELINE_KEYS)
-        self.assertEqual(len(catalog),28)
+        self.assertEqual(len(catalog),29)
         result=render(entries,hashlib.sha256(source.encode()).hexdigest())
         self.assertEqual(result,render(entries,hashlib.sha256(source.encode()).hexdigest()))
         self.assertFalse('<script>fictional()' in result)
@@ -39,7 +42,7 @@ class ConversionTests(SimpleTestCase):
         self.assertEqual(parser.entries[0]['title'],entries[0]['title'])
         self.assertEqual(parser.entries[0]['sources'],['A11변경'])
         self.assertEqual(parser.entries[1]['sources'],['A11'])
-        self.assertEqual(result.count('class="reading-area"'),280)
+        self.assertEqual(result.count('class="reading-area"'),288)
         self.assertTrue('&lt;script&gt;fictional()&lt;/script&gt;' in result)
     def test_reject_missing_duplicate_invalid_reference_page_or_template_code(self):
         for source in (fictional_md().replace('### 70 ','### 69 '),
@@ -54,7 +57,7 @@ class IntegratedReadingTests(TestCase):
     def setUp(self):
         self.member=Member.objects.create(name='가상 통합 검증',phone='01000000000',synthetic=True)
         member_session(self.client,self.member)
-    def test_all_seventy_once_exact_display_order_and_no_case_db_required(self):
+    def test_all_seventy_two_once_exact_display_order_and_no_case_db_required(self):
         response=self.client.get('/');html=response.content.decode()
         self.assertEqual(response.status_code,200)
         keys=re.findall(r'href="/cases/material/(T\d{2})/"',html)
@@ -68,7 +71,7 @@ class IntegratedReadingTests(TestCase):
             self.assertEqual(re.findall(r'id="material-(T\d{2})"',body),[key])
             self.assertEqual(body.count('class="reading-area"'),4)
             for heading in ('① 날짜','② 경과','③ 관련 규정','④ 쟁점'):self.assertEqual(body.count(heading),1)
-            self.assertTrue('2026년 11월 2일' in body)
+            self.assertTrue('2026년 11월 4일' in body)
             self.assertTrue('원문 연결이 준비되지 않았습니다.' in body)
             self.assertFalse(re.search(r'href="[^"]*/documents/',body))
             self.assertTrue('성도님의 목소리' in body)  # Shared header still present.
@@ -90,7 +93,7 @@ class IntegratedReadingTests(TestCase):
         self.assertEqual(CaseComment.objects.filter(reading_key='T01').count(),1)
         self.assertEqual(len(legacy_reading_entries()),30)
     def test_guest_inactive_unknown_files_and_cross_event_reply_protection(self):
-        self.assertEqual(self.client.get('/cases/material/T71/').status_code,404)
+        self.assertEqual(self.client.get('/cases/material/T73/').status_code,404)
         old=CaseComment.objects.create(member=self.member,author_name=self.member.name,reading_key='E01',body='가상 경계')
         self.assertEqual(self.client.post('/comments/T01/',{'body':'가상 답글','parent':old.pk}).status_code,400)
         self.member.active=False;self.member.save()
@@ -148,7 +151,7 @@ class SourceProtectionTests(TestCase):
 class TimelineMigrationTests(TransactionTestCase):
     def test_only_key_choices_expand_and_old_ids_connections_survive(self):
         from django.db.migrations.executor import MigrationExecutor
-        before=('portal','0013_alter_member_options_member_legacy_operator');after=('portal','0014_integrated_timeline_keys')
+        before=('portal','0013_alter_member_options_member_legacy_operator');after=('portal','0015_timeline_revision_20261104')
         executor=MigrationExecutor(connection);executor.migrate([before])
         try:
             apps=executor.loader.project_state([before]).apps

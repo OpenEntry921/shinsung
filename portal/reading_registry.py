@@ -4,9 +4,10 @@ from html.parser import HTMLParser
 from pathlib import Path
 import re
 from .timeline_links import LEGACY_RELATED
+from .timeline_revision import TIMELINE_ORDER, ENTRY_COUNT
 
 LEGACY_KEYS = tuple(f'E{i:02}' for i in range(1,31))
-TIMELINE_KEYS = tuple(f'T{i:02}' for i in range(1,71))
+TIMELINE_KEYS = TIMELINE_ORDER
 READING_KEYS = LEGACY_KEYS + TIMELINE_KEYS
 READING_CHOICES = [(key,key) for key in READING_KEYS]
 
@@ -27,7 +28,7 @@ class TimelineMetadata(HTMLParser):
         data=dict(attrs)
         if tag=='article' and data.get('data-key'):
             key=data['data-key']
-            self.entries.append(dict(key=key,title=data['data-title'],date=data['data-date'],category=data['data-category'],
+            self.entries.append(dict(key=key,number=data['data-number'],title=data['data-title'],date=data['data-date'],category=data['data-category'],
                 sources=data['data-sources'].split(),legacy=False,uncertain=False,
                 related_keys=tuple(old for old,targets in LEGACY_RELATED.items() if key in targets)))
 
@@ -36,7 +37,8 @@ def reading_entries():
     # This file is a protected Django template, never a public static/JSON endpoint.
     source=(Path(__file__).parent/'templates/portal/integrated_case_reading.html').read_text()
     parser=TimelineMetadata();parser.feed(source)
-    if tuple(e['key'] for e in parser.entries)!=TIMELINE_KEYS: raise ValueError('통합 사건 01~70의 누락·중복·순서를 확인하세요.')
+    if tuple(e['key'] for e in parser.entries)!=TIMELINE_KEYS: raise ValueError('통합 사건 개정본의 누락·중복·순서를 확인하세요.')
+    if [e['number'] for e in parser.entries]!=[f'{i:02}' for i in range(1,ENTRY_COUNT+1)]: raise ValueError('표시 번호를 확인하세요.')
     return parser.entries
 
 
