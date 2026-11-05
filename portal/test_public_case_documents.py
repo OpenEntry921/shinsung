@@ -1,4 +1,4 @@
-"""Fictional bytes only: real redacted files are validated separately when available."""
+"""Generated fixtures use fictional bytes; the existing C02 connection is checked separately."""
 import json,tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -75,4 +75,28 @@ class ProtectedTimelineRegressionTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertIn(b'data-opinion="OP15"',response.content)
         self.assertEqual(response.content.count(b'class="reading-area"'),4)
+        self.assertEqual(CaseComment.objects.count(),0)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class C02ConnectionTests(TestCase):
+    def test_existing_c02_reference_uses_manifest_image_once_without_pdf_fragment(self):
+        from django.contrib.staticfiles.storage import staticfiles_storage
+        from portal.reading_registry import reading_entries
+        entry=next(e for e in reading_entries() if e['key']=='T57')
+        self.assertEqual(entry['number'],'58')
+        self.assertEqual(entry['sources'],['C02'])
+        self.assertEqual(entry['source_locators']['C02'],'1쪽')
+        self.assertEqual(self.client.get('/cases/material/T57/').status_code,302)
+        member=Member.objects.create(name='가상 이미지 연결',phone='01000000000',synthetic=True)
+        member_session(self.client,member)
+        response=self.client.get('/cases/material/T57/')
+        self.assertEqual(response.status_code,200)
+        url=staticfiles_storage.url('case-documents/C02.jpg')
+        self.assertEqual(response.content.count(('href="'+url+'"').encode()),1)
+        self.assertNotIn((url+'#page=').encode(),response.content)
+        self.assertIn('원문 보기(개인정보 가림)'.encode(),response.content)
+        self.assertNotIn('개인정보 가림 사본 연결 확인 필요'.encode(),response.content)
+        self.assertEqual(response.content.count(b'class="reading-area"'),4)
+        self.assertIn(b'rel="noopener noreferrer"',response.content)
         self.assertEqual(CaseComment.objects.count(),0)
