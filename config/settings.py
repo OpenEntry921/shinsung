@@ -24,6 +24,7 @@ DATABASES = {'default':{'ENGINE':'django.db.backends.sqlite3','NAME':DATA_DIR/'p
 MEDIA_ROOT = DATA_DIR/'private'
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR/'runtime/static'
+STATICFILES_DIRS = [BASE_DIR/'static']
 LANGUAGE_CODE = 'ko-kr'
 TIME_ZONE = 'Asia/Seoul'
 USE_TZ = True

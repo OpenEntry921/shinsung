@@ -23,7 +23,7 @@ def legacy_reading_entries():
 
 class TimelineMetadata(HTMLParser):
     def __init__(self):
-        super().__init__();self.entries=[]
+        super().__init__();self.entries=[];self.source_code=None;self.source_text=[]
     def handle_starttag(self,tag,attrs):
         data=dict(attrs)
         if tag=='article' and data.get('data-key'):
@@ -31,6 +31,17 @@ class TimelineMetadata(HTMLParser):
             self.entries.append(dict(key=key,number=data['data-number'],title=data['data-title'],date=data['data-date'],category=data['data-category'],
                 sources=data['data-sources'].split(),legacy=False,uncertain=False,
                 related_keys=tuple(old for old,targets in LEGACY_RELATED.items() if key in targets)))
+        if tag=='li' and data.get('data-source') and self.entries:
+            self.source_code=data['data-source'];self.source_text=[]
+    def handle_data(self,data):
+        if self.source_code:self.source_text.append(data)
+    def handle_endtag(self,tag):
+        if tag=='li' and self.source_code:
+            match=re.search(r' · (?:PDF|JPG|2차 정리본) (.*?) \{%', ''.join(self.source_text),re.S)
+            if match:
+                self.entries[-1].setdefault('source_locators',{}).setdefault(self.source_code,match[1])
+                self.entries[-1].setdefault('source_references',[]).append({'code':self.source_code,'locator':match[1]})
+            self.source_code=None;self.source_text=[]
 
 
 def reading_entries():

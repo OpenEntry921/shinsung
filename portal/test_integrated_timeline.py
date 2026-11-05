@@ -72,7 +72,7 @@ class IntegratedReadingTests(TestCase):
             self.assertEqual(body.count('class="reading-area"'),4)
             for heading in ('① 날짜','② 경과','③ 관련 규정','④ 쟁점'):self.assertEqual(body.count(heading),1)
             self.assertTrue('2026년 11월 4일' in body)
-            self.assertTrue('원문 연결이 준비되지 않았습니다.' in body)
+            self.assertTrue('개인정보 가림 사본 연결 확인 필요' in body or '이번 공개 자료에 미포함' in body)
             self.assertFalse(re.search(r'href="[^"]*/documents/',body))
             self.assertTrue('성도님의 목소리' in body)  # Shared header still present.
             self.assertTrue('no-store' in response['Cache-Control'])
