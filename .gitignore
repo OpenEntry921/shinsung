@@ -15,3 +15,33 @@ private-materials/
 **/*.review.json
 
 **/case-reading.body
+
+# Explicitly approved redacted reading copies only (2026-11-05).
+!static/case-documents/A01.pdf
+!static/case-documents/A02.pdf
+!static/case-documents/A03.pdf
+!static/case-documents/A04.pdf
+!static/case-documents/A05.pdf
+!static/case-documents/A06.pdf
+!static/case-documents/A07.pdf
+!static/case-documents/A08.pdf
+!static/case-documents/A09.pdf
+!static/case-documents/A11.pdf
+!static/case-documents/A11-change.pdf
+!static/case-documents/A12.pdf
+!static/case-documents/B01.pdf
+!static/case-documents/B02.pdf
+!static/case-documents/B03.pdf
+!static/case-documents/B04.pdf
+!static/case-documents/B05.pdf
+!static/case-documents/B06.pdf
+!static/case-documents/B07.pdf
+!static/case-documents/B08.pdf
+!static/case-documents/C01.pdf
+!static/case-documents/C02.jpg
+!static/case-documents/C03.pdf
+!static/case-documents/C04.pdf
+!static/case-documents/C05.pdf
+!static/case-documents/C06.pdf
+!static/case-documents/D01.pdf
+!static/case-documents/E01.pdf
