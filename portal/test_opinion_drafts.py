@@ -33,6 +33,8 @@ class OpinionConversionTests(SimpleTestCase):
         output=render(new,'fictional')
         self.assertEqual(output.count('class="reading-area"'),288)
         self.assertEqual(output.count('data-opinion="OP01"'),1)
+        self.assertEqual(output.count('<h4>⑤ 우리의 의견</h4>'),1)
+        self.assertNotIn('<h4>우리의 의견 초안',output)
         self.assertTrue('&lt;script&gt;unsafe()&lt;/script&gt;' in output)
         self.assertFalse('<script>unsafe()' in output)
         self.assertTrue('<strong>작성 주체·상태</strong>' in output)

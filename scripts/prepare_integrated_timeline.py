@@ -114,7 +114,7 @@ def render(entries, digest):
                         opinion=re.search(r'OP[0-9]{2}$',part['heading'])
                         primary=part['heading'].startswith('우리의 의견 초안 ')
                         attr=(' data-opinion="'+opinion[0]+'"') if primary else ''
-                        lines += ['<div class="opinion-draft"'+attr+'><h4>'+escape(part['heading'])+'</h4>']
+                        lines += ['<div class="opinion-draft"'+attr+'><h4>'+escape('⑤ 우리의 의견' if primary else part['heading'])+'</h4>']
                         for paragraph in part['paragraphs']:
                             safe=re.sub(r'\*\*([^*]+)\*\*',r'<strong>\1</strong>',escape(paragraph))
                             lines += ['<p>'+safe.replace('\n','<br>')+'</p>']
