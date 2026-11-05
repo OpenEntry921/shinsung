@@ -1,6 +1,6 @@
 # 신성커뮤니티교회 자료 정리본
 
-> 아래는 자료 브랜치에서 제공된 처리 설명입니다. 현재 실제 PDF27개·489쪽은 연결·검증했으며 C02.jpg 한 개가 미확보입니다. 가림 처리 자체를 새로 보증한 것은 아닙니다. 실제 파일·HTTP·Docker·화면 검증과 운영 미확인 상태는 [IMPLEMENTATION.md](IMPLEMENTATION.md)를 확인하세요. 웹 URL은 JSON 문자열 대신 Django static resolver를 사용합니다.
+> 아래는 자료 브랜치에서 제공된 처리 설명입니다. 현재 실제 PDF27개·489쪽과 C02.jpg 1장을 모두 연결·검증했습니다. 가림 처리 자체를 새로 보증한 것은 아닙니다. 이미지의 기관 연락처 표시 등 공개범위·실제 HTTP/화면 검증·운영 미확인 상태는 [IMPLEMENTATION.md](IMPLEMENTATION.md)를 확인하세요. 웹 URL은 JSON 문자열 대신 Django static resolver를 사용합니다.
 
 2026년 11월 5일 작성. 제공된 ZIP의 28개 자료(PDF 27개, JPG 1개), 총 490쪽을 대상으로 정리했습니다.
 
