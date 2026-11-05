@@ -116,6 +116,12 @@ def render(entries, digest):
                         attr=(' data-opinion="'+opinion[0]+'"') if primary else ''
                         lines += ['<div class="opinion-draft"'+attr+'><h4>'+escape('⑤ 우리의 의견' if primary else part['heading'])+'</h4>']
                         for paragraph in part['paragraphs']:
+                            if part.get('related_numbers') and paragraph.startswith('**주 연결 사건**:'):
+                                main=paragraph.split(' / ',1)[0]
+                                main=re.sub(r'\*\*([^*]+)\*\*',r'<strong>\1</strong>',escape(main))
+                                links=['<a href="/cases/material/'+KEY_BY_NUMBER[n]+'/">'+f'{n:02}번'+'</a>' for n in part['related_numbers']]
+                                lines += ['<p>'+main+' / <strong>함께 읽을 사건</strong>: '+' · '.join(links)+'</p>']
+                                continue
                             safe=re.sub(r'\*\*([^*]+)\*\*',r'<strong>\1</strong>',escape(paragraph))
                             lines += ['<p>'+safe.replace('\n','<br>')+'</p>']
                         lines += ['</div>']
@@ -133,6 +139,8 @@ def main():
     args=parser.parse_args()
     data=args.source.read_bytes()
     entries,sources=parse_document(data.decode('utf-8'))
+    from portal.opinion_updates import apply_opinion_updates
+    entries=apply_opinion_updates(entries)
     result=render(entries,hashlib.sha256(data).hexdigest())
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(result,encoding='utf-8')
