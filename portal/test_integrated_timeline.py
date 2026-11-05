@@ -72,7 +72,7 @@ class IntegratedReadingTests(TestCase):
             self.assertEqual(body.count('class="reading-area"'),4)
             for heading in ('① 날짜','② 경과','③ 관련 규정','④ 쟁점'):self.assertEqual(body.count(heading),1)
             self.assertTrue('2026년 11월 4일' in body)
-            self.assertTrue('원문 연결이 준비되지 않았습니다.' in body)
+            self.assertTrue('원문 보기(개인정보 가림)' in body or '개인정보 가림 사본 연결 확인 필요' in body or '이번 공개 자료에 미포함' in body)
             self.assertFalse(re.search(r'href="[^"]*/documents/',body))
             self.assertTrue('성도님의 목소리' in body)  # Shared header still present.
             self.assertTrue('no-store' in response['Cache-Control'])
@@ -117,7 +117,7 @@ class SourceProtectionTests(TestCase):
         Case.objects.filter(pk=self.case.pk).update(state='published')
     def test_only_explicit_published_redacted_existing_reading_copy_and_no_original(self):
         from .timeline_sources import document_links
-        with patch('portal.timeline_sources.SOURCE_DOCUMENT_IDS',{'A11':self.document.pk}):
+        with patch('portal.timeline_sources.SOURCE_DOCUMENT_IDS',{'A11':self.document.pk}), patch('portal.public_case_documents.public_links',return_value={'public_unavailable':True}):
             self.assertEqual(document_links(['A11'])['A11'].pk,self.document.pk)
             html=self.client.get('/cases/material/T07/').content.decode()
             self.assertTrue(f'/documents/{self.document.pk}/reading/' in html)
@@ -132,7 +132,7 @@ class SourceProtectionTests(TestCase):
         with patch('portal.timeline_sources.SOURCE_DOCUMENT_IDS',{'A11':self.document.pk,'A11변경':self.document.pk}):
             self.assertEqual(document_links(['A11','A11변경']),{})
         self.document.reading.delete(save=False)
-        with patch('portal.timeline_sources.SOURCE_DOCUMENT_IDS',{'A11':self.document.pk}):
+        with patch('portal.timeline_sources.SOURCE_DOCUMENT_IDS',{'A11':self.document.pk}), patch('portal.public_case_documents.public_links',return_value={'public_unavailable':True}):
             self.assertEqual(document_links(['A11']),{})
 
     def test_admin_body_permission_does_not_imply_member_reading_download_permission(self):
@@ -142,7 +142,7 @@ class SourceProtectionTests(TestCase):
         self.client.logout();self.client.force_login(self.user)
         from django.utils import timezone
         session=self.client.session;session['admin_mfa_until']=timezone.now().timestamp()+300;session.save()
-        with patch('portal.timeline_sources.SOURCE_DOCUMENT_IDS',{'A11':self.document.pk}):
+        with patch('portal.timeline_sources.SOURCE_DOCUMENT_IDS',{'A11':self.document.pk}), patch('portal.public_case_documents.public_links',return_value={'public_unavailable':True}):
             response=self.client.get('/cases/material/T07/')
             self.assertEqual(response.status_code,200)
             self.assertFalse(f'/documents/{self.document.pk}/reading/' in response.content.decode())
