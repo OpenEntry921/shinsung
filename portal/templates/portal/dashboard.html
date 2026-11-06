@@ -1,0 +1,12 @@
+{% load timeline_tags %}
+<section aria-labelledby="dashboard"><h2 id="dashboard">공동 상황판</h2>
+<p>운영자가 게시한 기록을 먼저 표시하고, 사건 자료에 따른 기본 검토 항목을 함께 제공합니다. 기록·우리의 평가·질의안을 구분하며 답변 미확인은 답변 거부나 잘못의 인정을 뜻하지 않습니다.</p>
+<div class="dashboard-grid">{% for label, records in dashboard_groups %}<section class="card"><h3>{{ label }}</h3>
+{% for record in records %}<article class="dashboard-record" data-record="{{ record.id }}" style="border-top:1px solid var(--line);padding:18px 0;overflow-wrap:anywhere">
+<p><span class="tag">{{ record.classification }}</span>{% if record.is_default %} <span class="eyebrow">자료에 따른 기본 검토 항목</span>{% endif %}</p>
+<h4>{{ record.title }}</h4><p>{{ record.public_text }}</p>
+<p class="eyebrow">자료 기준일 {{ record.basis_on|date:'Y-m-d' }}{% if record.is_default %} · 화면 편집일 {{ record.edited_on|date:'Y-m-d' }}{% else %} · 운영 기록 수정일 {{ record.updated_at|date:'Y-m-d H:i' }}{% endif %}<br>상태: {{ record.status_text }}</p>
+{% if record.recipient %}<p>수신 주체: {{ record.recipient }}<br>전달일: {{ record.delivered_on|default:'전달 기록 없음' }}<br>답변 요청일: {{ record.reply_requested_on|default:'미등록' }} (요청 일정이며 법정·교단 기한이 아닙니다.)<br>규정상 기한·근거: {{ record.rule_deadline|default:'미확인' }}</p>{% endif %}
+<p>{% for entry in record.related %}<a href="{% url 'fixed_case' entry.key %}">{{ entry.number }}번 사건</a>{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+{% if record.sources %}<ul>{% for ref in record.sources %}<li>{{ ref.code }} · {{ ref.locator }} {% timeline_document ref.code ref.locator %}</li>{% endfor %}</ul>{% endif %}
+</article>{% endfor %}</section>{% endfor %}</div></section>
