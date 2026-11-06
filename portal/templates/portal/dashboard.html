@@ -7,6 +7,7 @@
 <h4>{{ record.title }}</h4><p>{{ record.public_text }}</p>
 <p class="eyebrow">자료 기준일 {{ record.basis_on|date:'Y-m-d' }}{% if record.is_default %} · 화면 편집일 {{ record.edited_on|date:'Y-m-d' }}{% else %} · 운영 기록 수정일 {{ record.updated_at|date:'Y-m-d H:i' }}{% endif %}<br>상태: {{ record.status_text }}</p>
 {% if record.recipient %}<p>수신 주체: {{ record.recipient }}<br>전달일: {{ record.delivered_on|default:'전달 기록 없음' }}<br>답변 요청일: {{ record.reply_requested_on|default:'미등록' }} (요청 일정이며 법정·교단 기한이 아닙니다.)<br>규정상 기한·근거: {{ record.rule_deadline|default:'미확인' }}</p>{% endif %}
+{% if record.task_progress %}<ul aria-label="항목별 확인 상태">{% for progress in record.task_progress %}<li>{{ progress }}</li>{% endfor %}</ul>{% endif %}
 <p>{% for entry in record.related %}<a href="{% url 'fixed_case' entry.key %}">{{ entry.number }}번 사건</a>{% if not forloop.last %} · {% endif %}{% endfor %}</p>
 {% if record.sources %}<ul>{% for ref in record.sources %}<li>{{ ref.code }} · {{ ref.locator }} {% timeline_document ref.code ref.locator %}</li>{% endfor %}</ul>{% endif %}
 </article>{% endfor %}</section>{% endfor %}</div></section>

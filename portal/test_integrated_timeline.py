@@ -152,7 +152,7 @@ class SourceProtectionTests(TestCase):
 class TimelineMigrationTests(TransactionTestCase):
     def test_only_key_choices_expand_and_old_ids_connections_survive(self):
         from django.db.migrations.executor import MigrationExecutor
-        before=('portal','0013_alter_member_options_member_legacy_operator');after=('portal','0015_timeline_revision_20261104')
+        before=('portal','0013_alter_member_options_member_legacy_operator');after=('portal','0016_community_tasks_label')
         executor=MigrationExecutor(connection);executor.migrate([before])
         try:
             apps=executor.loader.project_state([before]).apps
