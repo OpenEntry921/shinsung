@@ -412,7 +412,7 @@ class CaseComment(models.Model):
 
 
 class ProgressRecord(models.Model):
-    CATEGORIES = [('update','최근 업데이트'), ('issue','주요 확인사항'), ('request','질의·시정 요청'), ('response','답변·진행 상태'), ('week','이번 주 안내')]
+    CATEGORIES = [('update','최근 업데이트'), ('issue','주요 확인사항'), ('request','질의·시정 요청'), ('response','답변·진행 상태'), ('week','공동 확인 과제')]
     category = models.CharField(max_length=16, choices=CATEGORIES)
     title = models.CharField(max_length=200)
     public_text = models.TextField('게시 가능한 내용 (실명·상담 기록 제외)')

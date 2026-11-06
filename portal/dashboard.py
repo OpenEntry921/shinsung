@@ -21,7 +21,7 @@ DEFAULTS=(
  ('response','reasons','각하 이유 통지 청구 후속 회신','제공 자료에서 이후 회신을 확인하지 못했습니다. 추가 문서 확인 후 갱신합니다. 답변이 없다는 사정만으로 잘못을 인정했다고 보지 않습니다.','확인되지 않은 진행','회신 자료 확인 필요',(70,66,68),('C05','C04'),date(2026,10,28)),
  ('response','costs','예납금 반환 청구 처리 결과','제공 자료에서 이후 회신을 확인하지 못했습니다. 추가 문서 확인 후 갱신합니다. 청구, 답변 수령과 실제 환급·이행 확인을 구분합니다.','확인되지 않은 진행','처리·환급 자료 확인 필요',(71,),('C06',),date(2026,10,30)),
  ('response','appeal','상고 진행 확인','제공 자료에서 이후 회신을 확인하지 못했습니다. 추가 문서 확인 후 갱신합니다. 정리본 기재와 실제 상고 접수·진행 문서를 구분합니다.','확인되지 않은 진행','접수·진행 원자료 확인 필요',(65,63,64),('S01','A12'),BASIS),
- ('week','agenda','다음 모임 검토 안건','72개 사건의 사실관계·의견·원문 링크 검토\n18번 전도사 관련 공개 발언과 소명 절차 확인\n정직 판결·기소장 변경·상고 관련 문서 확인\n공식 질의안의 우선순위와 실제 전달 방법 논의\n토요일 오후 7시 안내에 대응하는 최신 날짜·공지·장소를 확인하지 못해 모임 일정을 확정하지 않습니다.','앞으로 할 일 · 검토 안건','일정 미확인 / 다음 모임 검토 안건',(18,60,63,65),('A12','S01'),BASIS),
+ ('week','agenda','교회 공동체가 확인해야 할 핵심 사항','성도들이 같은 자료를 바탕으로 경과와 쟁점을 확인할 수 있도록 다음 사항을 정리합니다.\n\n① 사건별 설명과 원문 자료가 일치하는지, 후속 판단과 변경된 내용이 반영됐는지 확인합니다.\n\n② 18번 사건에서 전도사의 사임·해임 사유가 어떤 근거로 공개됐으며, 당사자에게 설명과 반박의 기회가 제공됐는지 확인합니다.\n\n③ 정직 판결, 기소장 변경 및 상고 관련 문서를 대조해 최초 주장과 이후 판단을 구분합니다.\n\n④ 장로 측과 노회에 설명을 요구할 사항을 근거 자료와 함께 정리하고, 실제 전달 및 회신 여부를 확인합니다.\n\n⑤ 사실과 다른 설명이나 개인정보 노출이 확인되면 해당 자료와 표시를 바로잡습니다.','자료 확인·설명 요청','확인 과제 정리 · 항목별 진행 상황 확인 필요',(18,60,63,65),('A01','B01','A12','S01'),BASIS),
 )
 
 
@@ -35,7 +35,7 @@ def dashboard_groups():
         for record in records:
             entry=entries.get(record.reading_key)
             items.append(dict(id='db-'+str(record.pk),title=record.title,public_text=record.public_text,
-                classification='운영 게시 기록',status_text=record.get_status_display(),basis_on=record.basis_on,
+                classification='자료 확인·설명 요청' if category=='week' else '운영 게시 기록',status_text=record.get_status_display(),basis_on=record.basis_on,
                 updated_at=record.updated_at,recipient=record.recipient,delivered_on=record.delivered_on,
                 reply_requested_on=record.reply_requested_on,rule_deadline=record.rule_deadline,
                 related=[entry] if entry else [],sources=[],is_default=False))
@@ -51,6 +51,9 @@ def dashboard_groups():
                 if reference:refs.append(reference)
                 else:refs.append(dict(code=code,locator='추가 확인 필요'))
             items.append(dict(id='default-'+kind+'-'+key,title=title,public_text=body,classification=classification,
-                status_text=status,basis_on=basis,edited_on=EDITED_ON,related=related,sources=refs,is_default=True))
+                status_text=status,basis_on=basis,edited_on=EDITED_ON,related=related,sources=refs,is_default=True,
+                task_progress=('18번 근거자료 링크: 로컬 열람·쪽수 연결 확인 완료',
+                               '공개 사유·소명 자료: 추가 확인 필요',
+                               '질의안 실제 전달·회신: 새 확인 자료 없음') if kind=='week' else ()))
         result.append((label,items))
     return result

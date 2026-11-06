@@ -52,6 +52,26 @@ class DashboardTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertTrue('&lt;script&gt;fake()&lt;/script&gt;' in html)
         self.assertFalse('<script>fake()</script>' in html)
-        for label in ('자료 기준일','화면 편집일','미전달','회신 자료 확인 필요','다음 모임 검토 안건'):self.assertIn(label,html)
+        for label in ('자료 기준일','화면 편집일','미전달','회신 자료 확인 필요','공동 확인 과제'):self.assertIn(label,html)
         self.assertNotIn('아직 등록된 진행 기록이 없습니다',html)
         self.assertEqual(CaseComment.objects.count(),0)
+
+    def test_community_tasks_replaces_meeting_default_without_touching_operator_text(self):
+        items=dict(dashboard_groups())['공동 확인 과제']
+        self.assertEqual(len(items),1)
+        task=items[0]
+        self.assertEqual(task['id'],'default-week-agenda')
+        self.assertEqual(task['classification'],'자료 확인·설명 요청')
+        self.assertEqual(task['title'],'교회 공동체가 확인해야 할 핵심 사항')
+        self.assertEqual(task['status_text'],'확인 과제 정리 · 항목별 진행 상황 확인 필요')
+        self.assertEqual(len(task['task_progress']),3)
+        self.assertNotIn('모임',task['public_text'])
+        self.assertNotIn('토요일',task['public_text'])
+        self.assertEqual([r['code'] for r in task['sources']],['A01','B01','A12','S01'])
+        record=ProgressRecord.objects.create(category='week',title='가상 운영자 고유 제목',public_text='가상 운영자 작성 내용 유지',basis_on=date(2026,11,5),status='review',published=True)
+        current=dict(dashboard_groups())['공동 확인 과제']
+        self.assertEqual(len(current),1)
+        self.assertEqual(current[0]['public_text'],'가상 운영자 작성 내용 유지')
+        self.assertEqual(current[0]['status_text'],'검토 중')
+        self.assertEqual(ProgressRecord.objects.get(pk=record.pk).category,'week')
+        self.assertEqual(ProgressRecord.objects.count(),1)
