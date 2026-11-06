@@ -19,12 +19,13 @@ class DirectHTMLReadingTests(TestCase):
         self.assertNotIn('목록에 노출되면 안 되는 가상 의견',html)
         self.assertEqual(Case.objects.count(),0)
         self.assertEqual([e['key'] for e in legacy_reading_entries() if e['uncertain']],['E06','E10','E22'])
-        for i in range(1,73): self.assertEqual(html.count(f'href="/cases/material/T{i:02}/"'),1)
+        timeline=html.split('<ol class="timeline">',1)[1].split('</ol>',1)[0]
+        for i in range(1,73): self.assertEqual(timeline.count(f'href="/cases/material/T{i:02}/"'),1)
         self.assertNotIn('의견 1개',html)
         archive=self.client.get('/cases/archive/').content.decode()
         self.assertEqual(archive.count('class="timeline-card"'),30)
         self.assertIn('의견 1개',archive)
-        self.assertEqual(html.count('아직 등록된 진행 기록이 없습니다'),5)
+        self.assertEqual(html.count('아직 등록된 진행 기록이 없습니다'),0)
         self.assertEqual(html.count('진행 상태 등록 전'),5)
     def test_legacy_and_invalid_links(self):
         for i in (1,30):

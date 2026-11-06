@@ -8,6 +8,7 @@ if [ "${DEMO_LOGIN_ENABLED:-false}" = "true" ]; then
     python manage.py seed_demo --enable-login
 fi
 python manage.py bootstrap_roles
-python manage.py collectstatic --noinput
+# Clear only derived STATIC_ROOT so superseded redacted copies are not served.
+python manage.py collectstatic --clear --noinput
 # SQLite: one synchronous worker; use a supported PostgreSQL migration before scaling.
 exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 1 --timeout 30 --error-logfile -

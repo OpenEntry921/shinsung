@@ -67,13 +67,14 @@ def admin_mfa(request):
 
 def cases(request):
     from .reading_registry import reading_entries
+    from .dashboard import dashboard_groups
     from django.db.models import Count
     counts = dict(CaseComment.objects.filter(hidden=False, deleted_at=None).values('reading_key').annotate(n=Count('pk')).values_list('reading_key', 'n'))
     entries = reading_entries()
     for entry in entries: entry['count'] = counts.get(entry['key'], 0)
     return render(request, 'portal/cases.html', {
         'timeline_entries': entries,
-        'dashboard_groups': [(label, ProgressRecord.objects.filter(category=kind, published=True).order_by('-basis_on', '-updated_at')) for kind, label in ProgressRecord.CATEGORIES],
+        'dashboard_groups': dashboard_groups(),
         'roadmap': [(n, title, RoadmapStage.objects.filter(step=n).first()) for n, title in RoadmapStage.STEPS],
     })
 

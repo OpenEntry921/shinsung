@@ -60,7 +60,8 @@ class IntegratedReadingTests(TestCase):
     def test_all_seventy_two_once_exact_display_order_and_no_case_db_required(self):
         response=self.client.get('/');html=response.content.decode()
         self.assertEqual(response.status_code,200)
-        keys=re.findall(r'href="/cases/material/(T\d{2})/"',html)
+        timeline=html.split('<ol class="timeline">',1)[1].split('</ol>',1)[0]
+        keys=re.findall(r'href="/cases/material/(T\d{2})/"',timeline)
         self.assertEqual(tuple(keys),TIMELINE_KEYS)
         self.assertEqual(Case.objects.count(),0)
         self.assertFalse('class="case-group direct-case"' in html)
