@@ -38,6 +38,28 @@ class TrackedAdmin(admin.ModelAdmin):
             Case.objects.filter(pk__in=affected(form.instance)|getattr(form.instance,'_previous_case_ids',set())).update(last_editor=request.user)
     def has_delete_permission(self,request,obj=None): return False
 
+@admin.register(PreparationReview)
+class PreparationReviewAdmin(TrackedAdmin):
+    list_display = ['reading_key', 'status', 'updated_at']
+    list_filter = ['status']
+    search_fields = ['reading_key', 'evidence_notes', 'revised_draft']
+    readonly_fields = ['updated_at']
+
+    def get_readonly_fields(self, request, obj=None):
+        return self.readonly_fields + (['reading_key'] if obj else [])
+
+
+@admin.register(PreparationComment)
+class PreparationCommentAdmin(TrackedAdmin):
+    list_display = ['reading_key', 'author_name', 'kind', 'hidden', 'created_at']
+    list_filter = ['kind', 'hidden']
+    search_fields = ['reading_key', 'author_name', 'body']
+    readonly_fields = ['reading_key', 'author_name', 'kind', 'body', 'source_reference', 'created_at']
+
+    def has_add_permission(self, request):
+        return False
+
+
 class MemberForm(ModelForm):
     reason=__import__('django').forms.CharField(label='변경 사유 (연락처·활성 상태 변경 시 필수)')
     class Meta: model=Member; fields=['name','phone','active','label','legacy_operator']
@@ -321,3 +343,4 @@ class ApplicationAdmin(TrackedAdmin):
             from django.db.models import F
             Member.objects.filter(pk=member_id).update(session_version=F('session_version') + 1)
         Audit.objects.create(actor=str(request.user.pk), action='application_review', target=f'accessapplication:{obj.pk}', reason='동의·교인·본인 확인 및 승인 상태 변경')
+

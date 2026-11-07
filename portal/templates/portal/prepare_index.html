@@ -1,0 +1,16 @@
+{% extends 'portal/prepare_base.html' %}
+{% block content %}<p class="eyebrow">기존 의견 보존 · 별도 검토 · 증거 준비</p><h1>72개 사건 전수 점검표</h1><p class="lead">기존 우리의 의견을 그대로 두고, 상대방의 최초 주장과 후속 주장, 반대 증거를 대조합니다. 사건을 선택해 정정할 사실·확보할 증거·강화할 논리를 남겨 주세요.</p>
+<p class="notice">상고 관련 내용은 2026년 11월 7일 재검토 문서의 요약을 바탕으로 한 검토 출발점입니다. 원문 대조 전에는 확정된 오류나 사실로 취급하지 않습니다. 장로 측 주장과 기소위원장 측 주장의 작성·제출 주체도 따로 확인합니다.</p>
+<div class="stats"><div class="stat"><strong>72</strong>전체 사건</div><div class="stat"><strong>{{ rows|length }}</strong>표시 중</div><div class="stat"><strong>{{ confirmed_count }}</strong>검토 확정</div></div>
+<form method="get" class="panel toolbar"><label>사건·내용 검색<input name="q" value="{{ q }}" placeholder="번호, 제목, 주장, 준비할 증거"></label><label>검토 상태<select name="status"><option value="">전체</option>{% for value,label in statuses %}<option value="{{ value }}"{% if selected_status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button>검색</button><a href="{% url 'prepare' %}">초기화</a></form>
+<p class="muted">표를 좌우로 움직여 비교할 수 있습니다. 긴 의견의 전문과 댓글은 사건별 상세 화면에서 확인하세요.</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="72개 사건 주장과 증거 대조표"><table><thead><tr><th scope="col">사건 번호·이슈</th><th scope="col">장로 측 최초 주장</th><th scope="col">기존 우리의 의견</th><th scope="col">기소·추가의견·상고</th><th scope="col">대조할 쟁점·반대 증거</th><th scope="col">준비할 증거·자료</th><th scope="col">수정·강화할 주장 초안</th></tr></thead><tbody>
+{% for row in rows %}<tr><td><span class="source">{{ row.number|stringformat:'02d' }} · {{ row.key }}</span><h3><a href="{% url 'prepare_detail' row.key %}">{{ row.title }}</a></h3><p class="source">{{ row.date }}</p><span class="status">{{ row.status_label }}</span><p><a href="{% url 'prepare_detail' row.key %}#comments">의견 {{ row.comment_count }}개 · 검토하기 →</a></p></td>
+<td><p class="source">{{ row.initial_claim_basis }}</p><div class="text">{{ row.initial_claim }}</div><details><summary>기존 경과·근거 보기</summary><p class="text">{{ row.background }}</p><p class="source">{{ row.original_sources }}</p></details></td>
+<td><p class="source">기존 웹 의견 원문 보존본</p><details><summary>{{ row.opinion_title }} · 전문 펼치기</summary><div class="text">{{ row.original_opinion }}</div></details></td>
+<td><p class="source">{{ row.appeal_basis }}</p><details><summary>{{ row.appeal_summary|truncatechars:180 }}</summary><div class="text">{{ row.appeal_summary }}</div></details></td>
+<td><p class="source">종전 재검토의 제안 · 검토 확정 전</p><div class="text">{{ row.check_notes }}</div></td>
+<td><div class="text">{{ row.evidence_plan }}</div>{% if row.state.evidence_notes %}<h4>추가 준비 기록</h4><div class="text">{{ row.state.evidence_notes }}</div>{% endif %}</td>
+<td><p class="source">{{ row.draft_basis }}</p><div class="text">{% if row.state.revised_draft %}{{ row.state.revised_draft }}{% else %}{{ row.draft_suggestion }}{% endif %}</div></td></tr>
+{% empty %}<tr><td colspan="7">검색 조건에 맞는 사건이 없습니다.</td></tr>{% endfor %}</tbody></table></div>
+<p class="source">보존본 기준: {{ data.snapshot_date }} · 기존 웹 소스 {{ data.source_commit|slice:':7' }}. 재검토 문서의 점검 제안과 새 초안은 기존 의견과 구분해 표시합니다.</p>{% endblock %}

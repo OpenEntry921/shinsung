@@ -16,6 +16,10 @@ class AccessMiddleware:
         return response
     def authorize(self,request):
         request.member = None
+        # The temporary preparation login is isolated from member authentication.
+        # Every preparation view performs its own session check, including writes.
+        if request.path == '/prepare' or request.path.startswith('/prepare/'):
+            return self.get_response(request)
         mid=request.session.get('member_id')
         if mid:
             member=Member.objects.filter(pk=mid,active=True).first()
@@ -45,3 +49,4 @@ class AccessMiddleware:
         response['X-Robots-Tag']='noindex, nofollow'
         response['Content-Security-Policy']="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         return response
+

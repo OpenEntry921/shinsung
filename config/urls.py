@@ -3,7 +3,12 @@ from django.urls import path
 from portal import views as v
 from portal import discussions as d
 from portal import material_views as m
+from portal import preparation as p
 urlpatterns=[
+ path('prepare',p.prepare_redirect),path('prepare/',p.index,name='prepare'),
+ path('prepare/logout/',p.logout,name='prepare_logout'),
+ path('prepare/events/<slug:key>/',p.detail,name='prepare_detail'),
+ path('prepare/events/<slug:key>/comments/',p.comment,name='prepare_comment'),
  path('materials/import/',m.memo_import,name='memo_import'),path('materials/candidates/<int:pk>/convert/',m.candidate_convert),
  path('admin/',admin.site.urls), path('admin-mfa/',v.admin_mfa),
  path('apply/',v.apply,name='apply'),path('login/',v.login,name='login'),path('otp/',v.otp),path('logout/',v.logout),path('policy/',v.policy),path('health/',v.health),
@@ -17,3 +22,4 @@ urlpatterns=[
  path('comments/<slug:key>/<int:pk>/',d.comment_write,name='comment_change'),
  path('requests/',v.requests_view,name='requests'),
 ]
+
