@@ -1,0 +1,20 @@
+{% extends 'portal/prepare_base.html' %}
+{% block title %}상고 주장별 반박 준비실{% endblock %}
+{% block content %}
+<p class="eyebrow">{{ data.submitted_as }} · 작성일 {{ data.written_on }}</p><h1>상고 주장별 반박 준비표</h1>
+<p class="lead">상고이유서의 원문 순서로 주장·증거·원심 이유와 반박 준비를 대조합니다. 기존 72개 사건은 보조자료이며, 기존 의견과 준비위원 댓글은 그대로 보존합니다.</p>
+<p class="notice">상고 원문 이미지 대조: {{ data.reviewed_on }} · 상위 항목 {{ data.groups|length }}개 / 세부 준비 항목 {{ data.entries|length }}개. 원문 발췌·편집 요지·반박 초안을 구분합니다. 첨부 증거 전체의 진정성·입증 여부는 검증 완료가 아니며, 초안은 최종 제출문이나 공식 판단이 아닙니다. 제공되지 않은 재검토 MD를 새로 확인한 자료처럼 사용하지 않았습니다.</p>
+<p class="source">{{ data.receipt_note }}</p>
+<p class="source">분할 PDF 1편 {{ data.parts.0.pages }}쪽 + 2편 {{ data.parts.1.pages }}쪽. 1편의 원본 PDF3쪽은 신상 양식, PDF4~18쪽은 별지 본문(인쇄2~16쪽), PDF19~21쪽은 증거설명표·규정 안내, PDF22쪽부터 첨부 증거입니다. 열람본은 본문만 담고 원본 PDF4쪽이 열람본1쪽입니다.</p>
+<form method="get" class="panel toolbar"><label>상고 항목·내용·관련 사건 검색<input name="q" value="{{ q }}" placeholder="주장, 증거, 사건 번호 또는 키"></label><label>검토 상태<select name="status"><option value="">전체</option>{% for value,label in statuses %}<option value="{{ value }}"{% if selected_status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button>검색</button><a href="{% url 'prepare' %}">초기화</a></form>
+<p>{{ rows|length }}개 표시 · <a href="{% url 'prepare_document' 'appeal-body' %}" target="_blank" rel="noopener noreferrer">개인정보를 제거한 상고 본문 열람본</a> · 기존 원본 전체는 제공하지 않습니다.</p>
+<p class="muted">표는 좌우로 이동할 수 있습니다. 항목 제목을 누르면 긴 내용과 연결 사건·의견을 세로로 읽을 수 있습니다.</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="상고 주장별 반박 준비표"><table><thead><tr><th>상고 항목·쪽수</th><th>상대방 주장 원문·정확한 요지</th><th>상대방이 제시한 증거</th><th>관련 원심 판단</th><th>우리의 반박 초안</th><th>확보할 증거·미해결 질문</th><th>준비위원 의견</th></tr></thead><tbody>
+{% for row in rows %}<tr><td><span class="source">{{ row.group }}. {{ row.group_title }} / {{ row.original_number }}</span><h3><a href="{% url 'prepare_appeal_detail' row.id %}">{{ row.title }}</a></h3>{% if row.heading_is_editorial %}<p class="source">검토용 소제목 · 원문 제목: {{ row.original_title }}</p>{% endif %}<p class="source">{{ row.kind }} · {{ row.id }} · 원본 PDF {{ row.pdf_pages|join:', ' }}쪽 / 인쇄 {{ row.printed_pages|join:', ' }}쪽</p><span class="status">{{ row.status_label }}</span></td>
+<td><p class="source">상고 원문 발췌 (전체 문맥은 상세·원문 확인)</p><blockquote>{{ row.quote }}</blockquote><p class="source">별도 편집 요지</p><p>{{ row.summary }}</p></td>
+<td>{{ row.evidence }}<p class="source">{{ row.evidence_status }}</p></td>
+<td>{{ row.judgment }}</td><td><p class="source">검토 초안 · 최종 제출문 아님</p><div class="text">{% if row.state.revised_draft %}{{ row.state.revised_draft }}{% else %}{{ row.draft }}{% endif %}</div></td>
+<td>{{ row.questions }}{% if row.state.evidence_notes %}<p class="text">{{ row.state.evidence_notes }}</p>{% endif %}<p class="source">상고 본문·증거목록 확보 / 추가 증거 전체 대조·보완자료 확보 여부는 항목별 검토 필요</p></td>
+<td><a href="{% url 'prepare_appeal_detail' row.id %}#comments">의견 {{ row.comment_count }}개 · 작성</a><p class="source">작성자 직접 기재 · 개별 인증 아님</p>{% for event in row.related %}<p><a href="{% url 'prepare_detail' event.key %}">{{ event.number|stringformat:'02d' }} · {{ event.key }} · {{ event.title }}</a></p>{% endfor %}</td></tr>
+{% empty %}<tr><td colspan="7">검색 조건에 맞는 상고 항목이 없습니다.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

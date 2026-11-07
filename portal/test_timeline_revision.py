@@ -69,7 +69,7 @@ class RevisionConnectionTests(TestCase):
 
 class RevisionMigrationTests(TransactionTestCase):
     def test_existing_seventy_namespace_links_survive_new_two_key_constraint(self):
-        before=('portal','0014_integrated_timeline_keys');after=('portal','0016_community_tasks_label')
+        before=('portal','0014_integrated_timeline_keys');after=('portal','0018_appeal_preparation')
         executor=MigrationExecutor(connection);executor.migrate([before])
         try:
             apps=executor.loader.project_state([before]).apps

@@ -84,6 +84,13 @@ def index(request):
                 form.add_error(None, '이름과 전화번호를 확인해 주세요.')
         return render(request, 'portal/prepare_login.html', {'form': form}, status=status)
 
+    from .appeals import index as appeal_index
+    return appeal_index(request)
+
+
+@require_http_methods(['GET', 'HEAD'])
+@preparation_required
+def events(request):
     data = preparation_data()
     states = {state.reading_key: state for state in PreparationReview.objects.all()}
     counts = dict(PreparationComment.objects.filter(hidden=False).values('reading_key').annotate(n=Count('pk')).values_list('reading_key', 'n'))

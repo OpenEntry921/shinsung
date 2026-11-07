@@ -4,8 +4,13 @@ from portal import views as v
 from portal import discussions as d
 from portal import material_views as m
 from portal import preparation as p
+from portal import appeals as a
 urlpatterns=[
  path('prepare',p.prepare_redirect),path('prepare/',p.index,name='prepare'),
+ path('prepare/events/',p.events,name='prepare_events'),
+ path('prepare/claims/<slug:key>/',a.detail,name='prepare_appeal_detail'),
+ path('prepare/claims/<slug:key>/comments/',a.comment,name='prepare_appeal_comment'),
+ path('prepare/documents/<slug:code>/',a.document,name='prepare_document'),
  path('prepare/logout/',p.logout,name='prepare_logout'),
  path('prepare/events/<slug:key>/',p.detail,name='prepare_detail'),
  path('prepare/events/<slug:key>/comments/',p.comment,name='prepare_comment'),
