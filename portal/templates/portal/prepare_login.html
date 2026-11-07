@@ -1,0 +1,2 @@
+{% extends 'portal/prepare_base.html' %}
+{% block content %}<div class="narrow"><p class="eyebrow">PREPARATION ROOM</p><h1>준비위원 접속</h1><p>전달받은 이름과 전화번호로 접속해 주세요.</p><section class="panel"><form method="post" action="{% url 'prepare' %}">{% csrf_token %}{{ form.as_p }}<button>검토실 들어가기</button></form></section><p class="muted">현재는 공용 접속 방식입니다. 사건별 의견을 남길 때 작성자 이름을 따로 적어 주세요.</p></div>{% endblock %}

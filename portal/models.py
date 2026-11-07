@@ -439,6 +439,49 @@ class RoadmapStage(models.Model):
     basis_on = models.DateField('기준일')
 
 
+class PreparationReview(models.Model):
+    """Private working notes; never changes the published timeline or opinions."""
+    STATUS = [('unreviewed', '미검토'), ('collecting', '자료 확보 중'), ('reviewing', '검토 중'), ('confirmed', '확정')]
+    reading_key = models.CharField('사건 고유 키', max_length=8, unique=True)
+    status = models.CharField('검토 상태', max_length=16, choices=STATUS, default='unreviewed')
+    evidence_notes = models.TextField('확보한 증거와 추가 준비사항', blank=True)
+    revised_draft = models.TextField('수정·강화 주장 초안', blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        from .reading_registry import TIMELINE_KEYS
+        if self.reading_key not in TIMELINE_KEYS:
+            raise ValidationError({'reading_key': '72개 사건의 고유 키를 사용하세요.'})
+
+    def __str__(self):
+        return self.reading_key
+
+    class Meta:
+        verbose_name = '준비위원 검토'
+        verbose_name_plural = '준비위원 검토'
+
+
+class PreparationComment(models.Model):
+    KINDS = [('correction', '사실관계 정정'), ('evidence', '증거 제공'), ('argument', '반박 논리 제안'), ('other', '기타 의견')]
+    reading_key = models.CharField('사건 고유 키', max_length=8, db_index=True)
+    author_name = models.CharField('작성자 이름 (직접 기재)', max_length=80)
+    kind = models.CharField('의견 유형', max_length=16, choices=KINDS)
+    body = models.TextField('의견 내용', max_length=10000)
+    source_reference = models.CharField('자료명·쪽수·날짜', max_length=500, blank=True)
+    hidden = models.BooleanField('숨김', default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        from .reading_registry import TIMELINE_KEYS
+        if self.reading_key not in TIMELINE_KEYS:
+            raise ValidationError({'reading_key': '72개 사건의 고유 키를 사용하세요.'})
+
+    class Meta:
+        ordering = ['created_at', 'pk']
+        verbose_name = '준비위원 의견'
+        verbose_name_plural = '준비위원 의견'
+
+
 class AccessApplication(models.Model):
     """An application never creates or matches a Member automatically."""
     name = models.CharField(max_length=80)
@@ -466,3 +509,4 @@ class AccessApplication(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
