@@ -45,3 +45,6 @@ private-materials/
 !/static/case-documents/C02.jpg
 !/static/case-documents/D01.pdf
 !/static/case-documents/E01.pdf
+
+# Session-protected, flattened appeal body only; never raw appeal/attachments.
+!/portal/private_documents/appeal-body.redacted.pdf

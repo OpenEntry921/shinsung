@@ -510,3 +510,38 @@ class AccessApplication(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
 
+
+
+class AppealReview(models.Model):
+    """Distinct namespace; never migrate or reuse an existing event review."""
+    claim_id = models.CharField('상고 세부 주장 ID', max_length=80, unique=True)
+    status = models.CharField('검토 상태', max_length=16, choices=PreparationReview.STATUS, default='unreviewed')
+    evidence_notes = models.TextField('추가 확보 증거·미해결 질문', blank=True)
+    revised_draft = models.TextField('검토 중인 반박 초안', blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        from .appeals import selected_claim
+        if selected_claim(self.claim_id) is None:
+            raise ValidationError({'claim_id': '등록된 상고 세부 주장 ID를 사용하세요.'})
+
+    def __str__(self):
+        return self.claim_id
+
+
+class AppealComment(models.Model):
+    claim_id = models.CharField('상고 세부 주장 ID', max_length=80, db_index=True)
+    author_name = models.CharField('작성자 이름 (직접 기재·개별 인증 아님)', max_length=80)
+    kind = models.CharField('의견 유형', max_length=16, choices=PreparationComment.KINDS)
+    source_reference = models.CharField('자료명·쪽수', max_length=500, blank=True)
+    body = models.TextField('의견 내용', max_length=10000)
+    hidden = models.BooleanField('숨김', default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        from .appeals import selected_claim
+        if selected_claim(self.claim_id) is None:
+            raise ValidationError({'claim_id': '등록된 상고 세부 주장 ID를 사용하세요.'})
+
+    class Meta:
+        ordering = ['created_at', 'pk']

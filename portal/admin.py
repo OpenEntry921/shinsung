@@ -344,3 +344,24 @@ class ApplicationAdmin(TrackedAdmin):
             Member.objects.filter(pk=member_id).update(session_version=F('session_version') + 1)
         Audit.objects.create(actor=str(request.user.pk), action='application_review', target=f'accessapplication:{obj.pk}', reason='동의·교인·본인 확인 및 승인 상태 변경')
 
+
+
+@admin.register(AppealReview)
+class AppealReviewAdmin(TrackedAdmin):
+    list_display = ['claim_id', 'status', 'updated_at']
+    list_filter = ['status']
+    search_fields = ['claim_id', 'evidence_notes', 'revised_draft']
+    readonly_fields = ['updated_at']
+
+    def get_readonly_fields(self, request, obj=None):
+        return self.readonly_fields + (['claim_id'] if obj else [])
+
+
+@admin.register(AppealComment)
+class AppealCommentAdmin(TrackedAdmin):
+    list_display = ['claim_id', 'author_name', 'kind', 'hidden', 'created_at']
+    list_filter = ['kind', 'hidden']
+    readonly_fields = ['claim_id', 'author_name', 'kind', 'source_reference', 'body', 'created_at']
+
+    def has_add_permission(self, request):
+        return False

@@ -3,7 +3,7 @@
   "snapshot_date": "2026-11-07",
   "source_commit": "66305c2522a82a053480daf33bcbedc6f5312aa0",
   "timeline_source": "portal/templates/portal/integrated_case_reading.html",
-  "timeline_sha256": "380d2080a9997a216e20effb42a404004d810dbd4cae4efa96653659de3f4fa0",
+  "timeline_sha256": "c9024615db99c64bce0cbe00dd806edbab21250c0b16a5542c18ce00ba8fe1bd",
   "review_source": "우리측_주장과증거_재검토_20261107.md",
   "review_sha256": "04ff0fe6296c528061b2a49bbd030cadbae8dcc86f29b8189ec7e762754fa171",
   "entries": [
