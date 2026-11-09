@@ -4,7 +4,7 @@
 {% include 'portal/home_scripture.html' %}
 <h1>함께 살펴보고, 함께 풀어갈 기록</h1>
 <p class="notice">이곳은 교인들이 자료와 서로 다른 설명을 살펴보고 의견을 나누는 독립적인 공간입니다. 운영진의 해석에 반대하는 의견과 추가 자료도 제출할 수 있습니다. 확인된 오류는 정정하며, 반대 의견이라는 이유로 배제하지 않습니다.</p>
-<p><a href="/requests/">반론·정정·자료 제출</a> · <a href="/posts/">자유 게시판</a></p>
+{% if request.member %}<p><a href="/requests/">반론·정정·자료 제출</a> · <a href="/posts/">자유 게시판</a></p>{% else %}<p>일반 열람은 로그인과 개인정보 입력 없이 가능합니다. 의견 작성 기능은 현재 운영 방식을 정비 중입니다.</p>{% endif %}
 {% include 'portal/dashboard.html' %}
 <section aria-labelledby="roadmap"><h2 id="roadmap">해결 절차 로드맵</h2>
 <p>사건별 진행 단계는 다를 수 있습니다. 마지막 단계는 대응 필요성과 방법을 검토하는 단계이며 소송이나 외부 공개로 자동 연결되지 않습니다.</p>
@@ -13,6 +13,6 @@
 <p>장로 측·목사 측·성도 측의 관련 사건을 하나의 시간축으로 정리했습니다. 당사자의 주장과 기관의 판단을 구분했으며, 새 정리본에 따른 후속 정보와 원문 확인이 필요한 사항을 함께 표시했습니다. 정리 기준일은 2026년 11월 4일입니다.</p>
 <p>첨부 개정본의 {{ timeline_entries|length }}개 항목을 01~72번 순서로 표시합니다. 표시 번호는 고유 식별자나 공식 사건번호가 아니며 기존 사건 URL·의견 연결은 그대로 유지합니다. 날짜 표현은 원문 그대로이며, 반복·기간·미확인 일자를 임의로 확정하거나 다시 정렬하지 않습니다. 사건 구분은 법적으로 사건들이 병합됐다는 의미가 아닙니다.</p>
 <ol class="timeline">{% for entry in timeline_entries %}{% include 'portal/timeline_item.html' %}{% endfor %}</ol>
-<p><a href="{% url 'legacy_cases' %}">기존 정리 E01~E30과 당시 의견 보기</a> · 기존 게시글·댓글은 원래 사건번호에 그대로 남습니다.</p></section>
-<p><a href="/policy/">개인정보·교인 확인 및 운영 안내</a></p>
+<p><a href="{% url 'legacy_cases' %}">기존 정리 E01~E30 보기</a> · 기존 게시글·댓글은 원래 사건번호에 그대로 남습니다.</p></section>
+<p><a href="/policy/">운영·개인정보 안내</a></p>
 {% endblock %}

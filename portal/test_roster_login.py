@@ -14,9 +14,9 @@ class RosterLoginTests(TestCase):
                 session=self.client.session
                 session.update(dict(member_id=str(member.pk),member_version=member.session_version,member_auth='roster'))
                 session.save()
-                for path in ('/','/cases/material/E01/','/posts/','/requests/','/comments/E01/'):
-                    self.assertEqual(self.client.get(path).status_code,302)
-                self.assertEqual(self.client.get('/documents/1/reading/').status_code,403)
+                for path in ('/posts/','/requests/','/comments/E01/'):
+                    self.assertEqual(self.client.get(path).status_code,403)
+                self.assertEqual(self.client.get('/documents/1/reading/').status_code,404)
 
     def test_approval_consent_and_verification_each_required_and_revocation_flushes_session(self):
         member=Member.objects.create(name='가상 교인',phone='01000000000',synthetic=True)
@@ -25,7 +25,8 @@ class RosterLoginTests(TestCase):
             member_session(self.client,member)
             old=getattr(application,field)
             type(application).objects.filter(pk=application.pk).update(**{field:value})
-            self.assertEqual(self.client.get('/').status_code,302,field)
+            self.assertEqual(self.client.get('/').status_code,200,field)
+            self.assertEqual(self.client.get('/requests/').status_code,403,field)
             self.assertNotIn('member_id',self.client.session)
             type(application).objects.filter(pk=application.pk).update(**{field:old})
         member_session(self.client,member)
@@ -35,4 +36,5 @@ class RosterLoginTests(TestCase):
         self.assertEqual(self.client.get('/').status_code,200, dict(self.client.session))
         from django.utils import timezone
         type(application).objects.filter(pk=application.pk).update(revoked_at=timezone.now())
-        self.assertEqual(self.client.get('/cases/material/E01/').status_code,302)
+        self.assertEqual(self.client.get('/cases/material/E01/').status_code,200)
+        self.assertEqual(self.client.get('/requests/').status_code,403)

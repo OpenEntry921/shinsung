@@ -1,8 +1,33 @@
-from django.conf import settings
 from django.shortcuts import redirect
 from django.http import HttpResponseForbidden
 from django.utils import timezone
+from django.core.exceptions import ValidationError
+from django.urls import resolve, Resolver404
 from .models import Member
+
+# Clear only member authentication: preparation and administrator sessions are separate.
+MEMBER_SESSION_KEYS = (
+    'member_id', 'member_auth', 'member_version', 'identity_member',
+    'identity_version', 'identity_until', 'challenge_id',
+)
+
+
+def clear_member_session(request):
+    for key in MEMBER_SESSION_KEYS:
+        request.session.pop(key, None)
+
+
+def public_read(request):
+    if request.method not in ('GET', 'HEAD'):
+        return False
+    try:
+        match = resolve(request.path_info)
+    except Resolver404:
+        return False
+    return match.url_name in ('cases', 'legacy_cases', 'case', 'fixed_case', 'policy', 'health') or (
+        match.url_name == 'document' and match.kwargs['kind'] == 'reading'
+    )
+
 
 class AccessMiddleware:
     def __init__(self,get_response): self.get_response=get_response
@@ -22,28 +47,32 @@ class AccessMiddleware:
             return self.get_response(request)
         mid=request.session.get('member_id')
         if mid:
-            member=Member.objects.filter(pk=mid,active=True).first()
+            try:
+                member=Member.objects.filter(pk=mid,active=True).first()
+            except (ValidationError, ValueError, TypeError):
+                member=None
             if member and request.session.get('member_auth') in ('roster','exception') and member.session_version == request.session.get('member_version') and (request.session.get('member_auth')=='exception' or Member.objects.filter(phone=member.phone,active=True).count()==1):
                 request.member=member
-            else: request.session.flush()
+            else: clear_member_session(request)
         from .access import access_valid
-        if request.member and not access_valid(request):
-            request.session.flush()
+        try:
+            valid_member = request.member and access_valid(request)
+        except (TypeError, ValueError):
+            valid_member = False
+        if request.member and not valid_member:
+            clear_member_session(request)
             request.member = None
         if request.user.is_authenticated and request.user.is_staff:
             request.member = None
         path=request.path
-        public=path in ('/login/','/otp/','/exception/','/policy/','/health/','/apply/') or path.startswith('/static/')
+        public=public_read(request) or path in ('/login/','/otp/','/exception/','/apply/','/logout/') or (request.method in ('GET','HEAD') and path.startswith('/static/'))
         admin_public=path in ('/admin/login/','/admin/logout/','/admin-mfa/')
-        fixed_path=path=='/' or path.startswith('/cases/')
-        fixed_admin=(request.user.is_authenticated and request.user.is_active and request.user.is_staff and request.user.has_perm('portal.view_case') and request.session.get('admin_mfa_until',0)>timezone.now().timestamp()) if fixed_path else False
         if path.startswith('/admin') or path.startswith('/roster/') or path.startswith('/exception-issue/') or path.startswith('/materials/'):
             if not admin_public:
                 if not request.user.is_authenticated or not request.user.is_staff: return redirect('/admin/login/')
                 if request.session.get('admin_mfa_until',0) < timezone.now().timestamp(): return redirect('/admin-mfa/')
-        elif not public and not request.member and not fixed_admin and not (path.startswith('/documents/') and path.endswith('/original/') and request.user.is_authenticated and request.user.is_staff and request.session.get('admin_mfa_until',0)>timezone.now().timestamp()):
-            if path.startswith('/api/') or path.startswith('/documents/'): return HttpResponseForbidden('로그인이 필요합니다.')
-            return redirect('/login/')
+        elif not public and not request.member and not (path.startswith('/documents/') and path.endswith('/original/') and request.user.is_authenticated and request.user.is_staff and request.session.get('admin_mfa_until',0)>timezone.now().timestamp()):
+            return HttpResponseForbidden('공개 열람 범위에 포함되지 않는 요청입니다.')
         response=self.get_response(request)
         response['Cache-Control']='no-store, private'
         response['X-Robots-Tag']='noindex, nofollow'

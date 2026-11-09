@@ -71,10 +71,11 @@ class ReviewedMaterialTests(TestCase):
         self.assertNotContains(response,'검색 조건 초기화')
     def test_original_guest_inactive_and_direct_link_protection(self):
         self.run_import(apply=True,publish=True);case=Case.objects.get();doc=Document.objects.get()
-        for url in ('/',f'/cases/{case.pk}/',f'/documents/{doc.pk}/original/',f'/documents/{doc.pk}/reading/'):
-            response=self.client.get(url);self.assertIn(response.status_code,(302,403));self.assertNotIn('가상 원문 발췌',response.content.decode())
+        for url, status in (('/',200),(f'/cases/{case.pk}/',302),(f'/documents/{doc.pk}/original/',403),(f'/documents/{doc.pk}/reading/',403)):
+            response=self.client.get(url);self.assertEqual(response.status_code,status);self.assertNotIn('가상 원문 발췌',response.content.decode())
         self.member_session();self.assertEqual(self.client.get(f'/documents/{doc.pk}/original/').status_code,403);self.assertEqual(self.client.get(f'/documents/{doc.pk}/reading/').status_code,403)
-        Member.objects.filter(pk=self.member.pk).update(active=False);self.assertEqual(self.client.get('/').status_code,302)
+        Member.objects.filter(pk=self.member.pk).update(active=False);self.assertEqual(self.client.get('/').status_code,200)
+        self.assertEqual(self.client.get('/requests/').status_code,403)
 
     def test_source_edit_requires_revalidation_and_preserves_withdrawal(self):
         self.run_import(apply=True,publish=True)

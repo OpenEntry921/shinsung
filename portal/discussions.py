@@ -1,4 +1,4 @@
-"""Server-only discussion forms, grouped reads, and verified member writes."""
+"""Public excerpts and documents; private discussions and verified member writes."""
 from django import forms
 from django.db import transaction
 from django.http import HttpResponseForbidden
@@ -24,7 +24,7 @@ def discussion_context(request, key, error=None):
     # Query only the selected event, including its one-level replies.
     groups = {key: {'key': key, 'roots': [], 'responses': [], 'form': CommentForm(auto_id=f'id_{key}_%s')} for key in (key,)}
     nodes = {}
-    for comment in CaseComment.objects.filter(reading_key=key):
+    for comment in (CaseComment.objects.filter(reading_key=key) if request.member else CaseComment.objects.none()):
         node = {'item': comment, 'replies': [], 'own': bool(request.member and comment.member_id == request.member.pk)}
         nodes[comment.pk] = node
         if not comment.parent_id:
@@ -52,7 +52,7 @@ def comment_write(request, key, pk=None):
     if key not in READING_KEYS:
         raise Http404
     if not identity_verified(request):
-        return HttpResponseForbidden('의견 작성·수정·삭제에는 관리자 신원 확인 후 발급된 개인별 일회용 접속 수단이 필요합니다. /exception/에서 접속하세요.')
+        return HttpResponseForbidden('의견 작성 기능은 현재 운영 방식을 정비 중입니다.')
     form = CommentForm(request.POST)
     action = request.POST.get('action', 'create')
     parent_id = request.POST.get('parent', '')
@@ -112,4 +112,4 @@ def detail_context(request, key, discussion=None):
     return dict(discussion or discussion_context(request,key),selected_key=key,
                 entry=entry,previous=entries[index-1] if index else None,
                 following=entries[index+1] if index+1<len(entries) else None,
-                document_links=document_links(entry.get('sources',())) if request.member else {})
+                document_links=document_links(entry.get('sources',())))

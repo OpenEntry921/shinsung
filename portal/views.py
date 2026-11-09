@@ -1,7 +1,5 @@
-import secrets, datetime, hmac, json, uuid
-from pathlib import Path
+import secrets, datetime, uuid
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.middleware.csrf import rotate_token
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse, FileResponse
@@ -9,51 +7,33 @@ from django.views.decorators.http import require_POST
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from django.contrib.auth.hashers import make_password
 from django.forms import ModelForm
 from .models import *
-from .security import phone, digest, limit, valid_totp, keyed
+from .security import digest, limit, valid_totp, keyed
 from .roster import parse
-from .access import member_approved, operator_access
+from .access import member_approved
 
 GENERIC='입력 내용을 확인할 수 없습니다. 명부 오류·공용 번호·접속 곤란은 운영 관리자에게 문의하세요.'
 def health(request): return JsonResponse({'status':'ok'})
 def policy(request):
     from .access import policy_config
     return render(request, 'portal/policy.html', dict(policy_config(), operator_name=settings.OPERATOR_NAME, operator_contact=settings.OPERATOR_CONTACT))
-def login(request):
-    if request.member:
-        return redirect('/')
-    message = ''
-    if request.method == 'POST':
-        message = GENERIC
-        name = request.POST.get('name', '').strip()[:80]
-        number = phone(request.POST.get('phone', ''))[:20]
-        allowed = limit('ip:' + request.META.get('REMOTE_ADDR', ''), 20, 3600)
-        if allowed: allowed = limit('phone-hour:' + number, 5, 3600)
-        if allowed and name and number:
-            with transaction.atomic():
-                matches = Member.objects.select_for_update().filter(name=name, phone=number, active=True)
-                member = matches.first() if matches.count() == 1 else None
-                if (operator_access(member)
-                        and Member.objects.filter(phone=number, active=True).count() == 1):
-                    request.session.flush()
-                    rotate_token(request)
-                    request.session['member_id'] = str(member.pk)
-                    request.session['member_version'] = member.session_version
-                    request.session['member_auth'] = 'roster'
-                    request.session.set_expiry(3600)
-                    return redirect('/')
-    return render(request, 'portal/login.html', {'message': message})
+def legacy_entry(request):
+    # Retired member entry points do not inspect submitted personal information.
+    return redirect('/')
 
-@require_POST
-def otp(request):
-    # Retain old URL compatibility without accepting old SMS/development codes.
-    return redirect('/login/')
+
+login = legacy_entry
+otp = legacy_entry
+
 
 @require_POST
 def logout(request):
-    request.session.flush(); return redirect('/login/')
+    from .middleware import clear_member_session
+    clear_member_session(request)
+    rotate_token(request)
+    return redirect('/')
+
 
 def admin_mfa(request):
     if not request.user.is_authenticated or not request.user.is_staff: return redirect('/admin/login/')
@@ -69,7 +49,7 @@ def cases(request):
     from .reading_registry import reading_entries
     from .dashboard import dashboard_groups
     from django.db.models import Count
-    counts = dict(CaseComment.objects.filter(hidden=False, deleted_at=None).values('reading_key').annotate(n=Count('pk')).values_list('reading_key', 'n'))
+    counts = dict(CaseComment.objects.filter(hidden=False, deleted_at=None).values('reading_key').annotate(n=Count('pk')).values_list('reading_key', 'n')) if request.member else {}
     entries = reading_entries()
     for entry in entries: entry['count'] = counts.get(entry['key'], 0)
     return render(request, 'portal/cases.html', {
@@ -82,7 +62,7 @@ def cases(request):
 def legacy_cases(request):
     from .reading_registry import legacy_reading_entries
     from django.db.models import Count
-    counts=dict(CaseComment.objects.filter(hidden=False,deleted_at=None).values('reading_key').annotate(n=Count('pk')).values_list('reading_key','n'))
+    counts=dict(CaseComment.objects.filter(hidden=False,deleted_at=None).values('reading_key').annotate(n=Count('pk')).values_list('reading_key','n')) if request.member else {}
     entries=legacy_reading_entries()
     for entry in entries: entry['count']=counts.get(entry['key'],0)
     return render(request,'portal/legacy_cases.html',{'entries':entries})
@@ -100,9 +80,9 @@ def documents(request,pk,kind):
     if kind=='original':
         if not (request.user.is_authenticated and request.user.has_perm('portal.view_document') and request.session.get('admin_mfa_until',0)>timezone.now().timestamp()): return HttpResponseForbidden()
         file=doc.original
-    elif kind=='reading' and request.member and not doc.internal_memo and doc.state=='published' and doc.redaction_checked and Case.objects.filter(Q(documents=doc)|Q(evidence_links__document=doc),state='published').exists(): file=doc.reading
+    elif kind=='reading' and not doc.internal_memo and doc.state=='published' and doc.redaction_checked and Case.objects.filter(Q(documents=doc)|Q(evidence_links__document=doc),state='published').exists(): file=doc.reading
     else: return HttpResponseForbidden()
-    if not file: return HttpResponse(status=404)
+    if not file or not file.storage.exists(file.name): return HttpResponse(status=404)
     extension='docx' if kind=='original' and doc.internal_memo else 'pdf'
     mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document' if extension=='docx' else 'application/pdf'
     return FileResponse(file.open('rb'),as_attachment=True,filename=f'document-{doc.pk}.{extension}',content_type=mime)
@@ -208,46 +188,8 @@ def exception_issue(request):
             Audit.objects.create(actor=str(request.user.pk),action='exception_issue',target=str(member.pk),reason=reason)
         else: error='활성 교인 ID·별도 신원 확인·사유가 필요합니다.'
     return render(request,'portal/exception_issue.html',{'token':token,'error':error})
-def exception_login(request):
-    error=''
-    if request.method=='POST':
-        value=request.POST.get('token','')
-        if limit('exception:'+request.META.get('REMOTE_ADDR',''),10,3600):
-            try:
-                cid,code=value.split(':',1)
-                with transaction.atomic():
-                    ch=Challenge.objects.select_for_update().filter(pk=cid,exception=True,used=False,expires_at__gt=timezone.now()).first()
-                    if ch and ch.attempts<5:
-                        ch.attempts+=1; ch.save()
-                        if hmac.compare_digest(ch.digest,digest(str(ch.id),code)) and member_approved(ch.member) and ch.member.active and ch.member.session_version==ch.version and (not settings.DEV or ch.member.synthetic):
-                            ch.used=True; ch.save(); request.session.flush(); rotate_token(request); request.session['member_id']=str(ch.member_id); request.session['member_version']=ch.version; request.session['member_auth']='exception'; request.session['identity_member']=str(ch.member_id); request.session['identity_version']=ch.version; request.session['identity_until']=(timezone.now()+datetime.timedelta(hours=1)).timestamp(); request.session.set_expiry(3600); return redirect('/')
-            except (ValueError,ValidationError): pass
-        error='접속 수단을 확인할 수 없습니다.'
-    return render(request,'portal/exception.html',{'error':error})
-
-
-def apply(request):
-    from django import forms
-    from .access import registration_ready, policy_config, POLICY_VERSION
-    class ApplicationForm(forms.Form):
-        name = forms.CharField(label='이름', max_length=80)
-        phone = forms.RegexField(label='연락처', regex=r'^0[0-9]{8,10}$', max_length=20)
-        privacy = forms.BooleanField(label='가입·인증을 위한 이름·연락처 수집·이용에 동의합니다.')
-        religion = forms.BooleanField(label='교인 여부 확인에 수반되는 종교 소속 정보 처리에 별도로 동의합니다.')
-        transfer = forms.BooleanField(label='아래 교회 대조 요청을 위한 제삼자 제공에 별도로 동의합니다.')
-    ready = registration_ready()
-    form = ApplicationForm(request.POST if request.method == 'POST' else None)
-    submitted = False
-    if ready and request.method == 'POST':
-        if not limit('application:'+request.META.get('REMOTE_ADDR',''), 5, 3600):
-            return HttpResponse('잠시 후 다시 시도하세요.', status=429)
-        if form.is_valid():
-            now = timezone.now()
-            AccessApplication.objects.create(name=form.cleaned_data['name'], phone=form.cleaned_data['phone'],
-                consent_version=POLICY_VERSION, privacy_consent_at=now, religious_consent_at=now,
-                transfer_consent_at=now, policy_snapshot=policy_config())
-            submitted = True
-    return render(request, 'portal/apply.html', dict(policy_config(), form=form, ready=ready, submitted=submitted, version=POLICY_VERSION))
+exception_login = legacy_entry
+apply = legacy_entry
 
 
 def comment_link(request, pk):

@@ -52,7 +52,7 @@ class OpinionUpdateTests(SimpleTestCase):
 @override_settings(SECURE_SSL_REDIRECT=False)
 class OpinionConnectionTests(TestCase):
     def test_mutual_links_and_existing_real_name_comments_are_preserved(self):
-        self.assertEqual(self.client.get('/cases/material/T08/').status_code,302)
+        self.assertEqual(self.client.get('/cases/material/T08/').status_code,200)
         member=Member.objects.create(name='가상 절차 검증',phone='01000000000',synthetic=True)
         comment=CaseComment.objects.create(member=member,author_name=member.name,reading_key='T17',body='가상 기존 성도 의견')
         member_session(self.client,member)

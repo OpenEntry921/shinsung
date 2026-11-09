@@ -34,7 +34,7 @@ class EditorialSourceTests(SimpleTestCase):
 @override_settings(SECURE_SSL_REDIRECT=False)
 class EveryOpinionPageTests(TestCase):
     def test_one_editorial_per_event_without_inserting_or_moving_reader_comments(self):
-        self.assertEqual(self.client.get('/cases/material/T01/').status_code,302)
+        self.assertEqual(self.client.get('/cases/material/T01/').status_code,200)
         member=Member.objects.create(name='가상 전체 의견 검증',phone='01000000000',synthetic=True)
         old=CaseComment.objects.create(member=member,author_name=member.name,reading_key='T08',body='가상 기존 성도 의견')
         member_session(self.client,member)

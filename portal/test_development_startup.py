@@ -20,7 +20,7 @@ class DemoLoginTests(TestCase):
         member=Member.objects.get()
         self.client.post('/login/', {'name': member.name, 'phone': member.phone})
         self.assertNotIn('member_id', self.client.session)
-        self.assertEqual(self.client.get('/').status_code,302)
+        self.assertEqual(self.client.get('/').status_code,200)
 
 
 
@@ -163,6 +163,8 @@ class DevelopmentStartupTests(SimpleTestCase):
             "m=Member.objects.get(); assert m.synthetic and m.active and m.legacy_operator; "
             "assert AccessApplication.objects.count()==0; c=Client(); "
             "r=c.post('/login/',{'name':'가상교인','phone':'01000000000'}); assert r.status_code==302 and r.url=='/'; "
+            "assert 'member_id' not in c.session; "
+            "s=c.session; s.update(dict(member_id=str(m.pk),member_auth='roster',member_version=m.session_version)); s.save(); "
             "assert c.get('/').status_code==200; "
             "assert all(c.get(f'/cases/material/E{i:02}/').status_code==200 for i in range(1,31)); "
             "r=c.post('/comments/E01/',{'body':'가상 시작 검증 의견'}); assert r.status_code==302")
@@ -181,7 +183,8 @@ class DevelopmentStartupTests(SimpleTestCase):
             "'grants':Audit.objects.filter(action='synthetic_login_enable').count()},default=str))").splitlines()[-1]
         self.assertEqual(before, after)
         self.manage('shell', '-c',
-            "from django.test import Client; from portal.models import CaseComment; c=Client(); "
+            "from django.test import Client; from portal.models import Member,CaseComment; c=Client(); "
+            "m=Member.objects.get(); s=c.session; s.update(dict(member_id=str(m.pk),member_auth='roster',member_version=m.session_version)); s.save(); "
             "assert c.post('/login/',{'name':'가상교인','phone':'01000000000'}).status_code==302; "
             "comment=CaseComment.objects.get(); "
             "assert c.post(f'/comments/E01/{comment.pk}/',{'action':'delete'}).status_code==302; "

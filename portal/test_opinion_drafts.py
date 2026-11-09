@@ -52,8 +52,8 @@ class OpinionConversionTests(SimpleTestCase):
 class OpinionAccessTests(TestCase):
     def test_drafts_are_protected_and_do_not_create_comments_or_case_rows(self):
         guest=self.client.get('/cases/material/T05/')
-        self.assertEqual(guest.status_code,302)
-        self.assertNotIn(b'data-opinion=',guest.content)
+        self.assertEqual(guest.status_code,200)
+        self.assertIn(b'data-opinion=',guest.content)
         member=Member.objects.create(name='가상 검증',phone='01000000000',synthetic=True)
         member_session(self.client,member)
         response=self.client.get('/cases/material/T05/')
@@ -65,5 +65,5 @@ class OpinionAccessTests(TestCase):
         self.assertEqual(Case.objects.count(),0)
         member.active=False;member.save()
         denied=self.client.get('/cases/material/T05/')
-        self.assertEqual(denied.status_code,302)
-        self.assertNotIn(b'data-opinion=',denied.content)
+        self.assertEqual(denied.status_code,200)
+        self.assertIn(b'data-opinion=',denied.content)

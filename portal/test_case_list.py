@@ -32,7 +32,7 @@ class DirectHTMLReadingTests(TestCase):
             self.assertRedirects(self.client.get(f'/cases/{i}/'),f'/cases/material/E{i:02}/',fetch_redirect_response=False)
             self.assertEqual(self.client.get(f'/cases/material/E{i:02}/').status_code,200)
         self.assertEqual(self.client.get('/cases/material/E31/').status_code,404)
-    def test_guest_no_body(self):
+    def test_guest_reads_public_body(self):
         self.client.logout()
         for path in ('/','/cases/1/','/cases/material/E30/'):
-            self.assertEqual(self.client.get(path).status_code,302)
+            self.assertEqual(self.client.get(path).status_code,302 if path=='/cases/1/' else 200)
