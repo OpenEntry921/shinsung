@@ -37,8 +37,8 @@ class PreparationTests(TestCase):
             self.assertIn('noindex', response['X-Robots-Tag'])
             self.assertIn('no-store', response['Cache-Control'])
             self.assertContains(self.client.get('/prepare/events/T01/'), '기존 ⑤ 우리의 의견')
-            self.assertRedirects(self.client.get('/'), '/login/', fetch_redirect_response=False)
-            self.assertEqual(self.client.post('/comments/T01/', {'body': '가상 분리 검증'}).status_code, 302)
+            self.assertEqual(self.client.get('/').status_code, 200)
+            self.assertEqual(self.client.post('/comments/T01/', {'body': '가상 분리 검증'}).status_code, 403)
             self.assertEqual(CaseComment.objects.count(), 0)
 
     def test_member_login_does_not_open_preparation_or_link_to_it(self):

@@ -68,7 +68,7 @@ class PublicCopyTests(SimpleTestCase):
 @override_settings(SECURE_SSL_REDIRECT=False)
 class ProtectedTimelineRegressionTests(TestCase):
     def test_missing_public_files_do_not_break_protected_drafts_or_create_rows(self):
-        self.assertEqual(self.client.get('/cases/material/T05/').status_code,302)
+        self.assertEqual(self.client.get('/cases/material/T05/').status_code,200)
         member=Member.objects.create(name='가상 문서 검증',phone='01000000000',synthetic=True)
         member_session(self.client,member)
         response=self.client.get('/cases/material/T05/')
@@ -87,7 +87,7 @@ class C02ConnectionTests(TestCase):
         self.assertEqual(entry['number'],'58')
         self.assertEqual(entry['sources'],['C02'])
         self.assertEqual(entry['source_locators']['C02'],'1쪽')
-        self.assertEqual(self.client.get('/cases/material/T57/').status_code,302)
+        self.assertEqual(self.client.get('/cases/material/T57/').status_code,200)
         member=Member.objects.create(name='가상 이미지 연결',phone='01000000000',synthetic=True)
         member_session(self.client,member)
         response=self.client.get('/cases/material/T57/')

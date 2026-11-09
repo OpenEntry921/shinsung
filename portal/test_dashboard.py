@@ -44,7 +44,7 @@ class DashboardTests(TestCase):
         with self.assertRaises(ValidationError):record.full_clean()
         record.recipient='가상 수신 기관';record.delivered_on=date(2026,11,5);record.full_clean()
     def test_protected_page_escapes_operator_records_and_shows_distinct_statuses(self):
-        self.assertEqual(self.client.get('/').status_code,302)
+        self.assertEqual(self.client.get('/').status_code,200)
         member=Member.objects.create(name='가상 상황판 검증',phone='01000000000',synthetic=True)
         member_session(self.client,member)
         record=ProgressRecord.objects.create(category='update',title='<script>fake()</script>',public_text='가상 공지',reading_key='T69',basis_on=date(2026,11,5),status='review',published=True)

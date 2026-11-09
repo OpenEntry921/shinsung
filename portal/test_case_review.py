@@ -105,7 +105,7 @@ class CaseReviewTests(TestCase):
     def test_guest_inactive_member_and_regular_member_access(self):
         doc=self.doc();self.publish()
         self.assertEqual(self.client.get(f'/cases/{self.case.pk}/').status_code,302)
-        self.assertEqual(self.client.get(f'/documents/{doc.pk}/reading/').status_code,403)
+        self.assertEqual(self.client.get(f'/documents/{doc.pk}/reading/').status_code,200)
         self.assertEqual(self.client.get('/api/cases/').status_code,403)
         self.login_member();self.assertEqual(self.client.get(f'/documents/{doc.pk}/reading/').status_code,200);self.assertEqual(self.client.get(f'/documents/{doc.pk}/original/').status_code,403)
         self.assertEqual(self.client.get('/materials/import/').status_code,302)

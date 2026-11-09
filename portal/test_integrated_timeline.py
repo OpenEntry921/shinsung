@@ -99,8 +99,12 @@ class IntegratedReadingTests(TestCase):
         self.assertEqual(self.client.post('/comments/T01/',{'body':'가상 답글','parent':old.pk}).status_code,400)
         self.member.active=False;self.member.save()
         for path in ('/','/cases/archive/','/cases/material/T01/','/cases/material/T70/','/portal/templates/portal/integrated_case_reading.html'):
-            response=self.client.get(path);self.assertEqual(response.status_code,302)
-            self.assertFalse('material-T01' in response.content.decode())
+            response=self.client.get(path)
+            if path.startswith('/portal/'):
+                self.assertEqual(response.status_code,403)
+            else:
+                self.assertEqual(response.status_code,200)
+            self.assertNotContains(response, '가상 경계', status_code=response.status_code)
 
 
 @override_settings(SECURE_SSL_REDIRECT=False)
@@ -126,7 +130,8 @@ class SourceProtectionTests(TestCase):
             response=self.client.get(f'/documents/{self.document.pk}/reading/')
             self.assertEqual(response.status_code,200);response.close()
             self.assertEqual(self.client.get(f'/documents/{self.document.pk}/original/').status_code,403)
-            self.client.logout();self.assertEqual(self.client.get(f'/documents/{self.document.pk}/reading/').status_code,403)
+            self.client.logout();self.assertEqual(self.client.get(f'/documents/{self.document.pk}/reading/').status_code,200)
+            self.assertContains(self.client.get('/cases/material/T07/'),f'/documents/{self.document.pk}/reading/')
             Document.objects.filter(pk=self.document.pk).update(redaction_checked=False)
             self.assertEqual(document_links(['A11']),{})
         Document.objects.filter(pk=self.document.pk).update(redaction_checked=True)
@@ -136,7 +141,7 @@ class SourceProtectionTests(TestCase):
         with patch('portal.timeline_sources.SOURCE_DOCUMENT_IDS',{'A11':self.document.pk}), patch('portal.public_case_documents.public_links',return_value={'public_unavailable':True}):
             self.assertEqual(document_links(['A11']),{})
 
-    def test_admin_body_permission_does_not_imply_member_reading_download_permission(self):
+    def test_admin_can_read_public_copy_but_does_not_gain_original_permission(self):
         from django.contrib.auth.models import Permission
         self.user.is_staff=True;self.user.save()
         self.user.user_permissions.add(Permission.objects.get(codename='view_case',content_type__app_label='portal'))
@@ -146,7 +151,8 @@ class SourceProtectionTests(TestCase):
         with patch('portal.timeline_sources.SOURCE_DOCUMENT_IDS',{'A11':self.document.pk}), patch('portal.public_case_documents.public_links',return_value={'public_unavailable':True}):
             response=self.client.get('/cases/material/T07/')
             self.assertEqual(response.status_code,200)
-            self.assertFalse(f'/documents/{self.document.pk}/reading/' in response.content.decode())
+            self.assertTrue(f'/documents/{self.document.pk}/reading/' in response.content.decode())
+            self.assertEqual(self.client.get(f'/documents/{self.document.pk}/original/').status_code,403)
 
 
 class TimelineMigrationTests(TransactionTestCase):

@@ -7,30 +7,24 @@ from .access import POLICY_FIELDS
 
 @override_settings(SECURE_SSL_REDIRECT=False)
 class ApplicationTests(TestCase):
-    def test_missing_configuration_blocks_get_and_post_without_storing_pii(self):
-        response=self.client.post('/apply/',dict(name='가상',phone='01000000000',privacy='on',religion='on',transfer='on'))
-        self.assertContains(response,'가입 접수 준비 중')
+    def test_retired_application_does_not_store_pii(self):
+        for method in (self.client.get, self.client.post):
+            response=method('/apply/',dict(name='가상',phone='01000000000',privacy='on',religion='on',transfer='on'))
+            self.assertRedirects(response,'/',fetch_redirect_response=False)
         self.assertEqual(AccessApplication.objects.count(),0)
-        self.assertNotContains(response,'name="phone"')
     @override_settings(**{key:'가상 정책 설정' for key in POLICY_FIELDS})
-    def test_each_explicit_consent_required_no_automatic_member_link(self):
+
+    def test_configured_legacy_application_still_cannot_collect(self):
         member=Member.objects.create(name='가상',phone='01000000000',synthetic=True)
         data=dict(name=member.name,phone=member.phone,privacy='on',religion='on',transfer='on')
-        response=self.client.get('/apply/')
-        self.assertNotContains(response,'checked')
-        for field in ('privacy','religion','transfer'):
-            partial=dict(data);partial.pop(field)
-            self.assertEqual(self.client.post('/apply/',partial).status_code,200)
-            self.assertEqual(AccessApplication.objects.count(),0)
-        self.client.post('/apply/',data)
-        app=AccessApplication.objects.get()
-        self.assertIsNone(app.member_id);self.assertFalse(app.approved)
-        self.assertTrue(app.consent_version and app.policy_snapshot and app.privacy_consent_at and app.transfer_consent_at and app.religious_consent_at)
+        self.assertRedirects(self.client.post('/apply/',data),'/',fetch_redirect_response=False)
+        self.assertEqual(AccessApplication.objects.count(),0)
         self.assertEqual(Member.objects.count(),1)
         self.assertNotIn('member_id',self.client.session)
-        self.assertEqual(self.client.get('/cases/material/E01/').status_code,302)
+        self.assertEqual(self.client.get('/cases/material/E01/').status_code,200)
         secure=Client(enforce_csrf_checks=True)
         self.assertEqual(secure.post('/apply/',data).status_code,403)
+
     def test_approval_requires_distinct_actual_confirmation_records(self):
         app=AccessApplication(name='가상',phone='01000000000',approved=True)
         with self.assertRaises(ValidationError):app.save()

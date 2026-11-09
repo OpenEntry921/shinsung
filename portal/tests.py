@@ -30,9 +30,11 @@ class PortalTests(TestCase):
         ch=Challenge(member=member or self.member,version=(member or self.member).session_version,expires_at=timezone.now()+datetime.timedelta(minutes=5),**kwargs)
         ch.digest=digest(str(ch.pk),'123456');ch.save(); session=self.client.session;session['challenge_id']=str(ch.pk);session.save();return ch
     def test_guest_access(self):
-        for url in ['/','/posts/','/cases/1/','/requests/']:
-            self.assertEqual(self.client.get(url).status_code,302)
-        self.assertEqual(self.client.get('/documents/1/reading/').status_code,403)
+        self.assertEqual(self.client.get('/').status_code,200)
+        self.assertEqual(self.client.get('/cases/1/').status_code,302)
+        for url in ['/posts/','/requests/']:
+            self.assertEqual(self.client.get(url).status_code,403)
+        self.assertEqual(self.client.get('/documents/1/reading/').status_code,404)
         self.assertEqual(self.client.get('/api/anything/').status_code,403)
         self.assertEqual(self.client.get('/policy/').status_code,200)
     def test_member_cannot_admin(self):
@@ -41,12 +43,16 @@ class PortalTests(TestCase):
             self.assertEqual(self.client.get(url).status_code,302)
     def test_inactive_revocation(self):
         self.member_login(); self.member.active=False;self.member.save()
-        self.assertEqual(self.client.get('/').status_code,302)
+        self.assertEqual(self.client.get('/').status_code,200)
+        self.assertEqual(self.client.get('/requests/').status_code,403)
+        self.assertNotIn('member_id',self.client.session)
     def test_number_change_revokes_session_and_otp(self):
         ch=self.challenge(); self.member_login();self.member.phone='01000000003';self.member.save()
-        self.assertEqual(self.client.get('/').status_code,302)
+        self.assertEqual(self.client.get('/').status_code,200)
+        self.assertEqual(self.client.get('/requests/').status_code,403)
+        self.assertNotIn('member_id',self.client.session)
         session=self.client.session;session['challenge_id']=str(ch.pk);session.save()
-        self.assertRedirects(self.client.post('/otp/',{'code':'123456'}),'/login/',fetch_redirect_response=False)
+        self.assertRedirects(self.client.post('/otp/',{'code':'123456'}),'/',fetch_redirect_response=False)
     def test_roster_login_without_sms(self):
         self.client.post("/login/", {"name": self.member.name, "phone": self.member.phone})
         self.assertNotIn("member_id", self.client.session)
@@ -54,22 +60,22 @@ class PortalTests(TestCase):
     def test_incorrect_name_or_phone_has_no_session(self):
         response=self.client.post('/login/',{'name':'존재하지않는가상교인','phone':self.member.phone})
         from .views import GENERIC
-        self.assertContains(response,"기존 이용자는 교인 로그인으로 접속해 주세요.");self.assertNotIn('member_id',self.client.session)
+        self.assertRedirects(response,'/',fetch_redirect_response=False);self.assertNotIn('member_id',self.client.session)
     def test_legacy_otp_cannot_create_session(self):
         self.challenge()
-        self.assertRedirects(self.client.post('/otp/',{'code':'123456'}),'/login/',fetch_redirect_response=False)
+        self.assertRedirects(self.client.post('/otp/',{'code':'123456'}),'/',fetch_redirect_response=False)
         self.assertNotIn('member_id',self.client.session)
     def test_login_request_limit(self):
         with patch('portal.views.limit',return_value=False):
             response=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
         from .views import GENERIC
-        self.assertContains(response,"기존 이용자는 교인 로그인으로 접속해 주세요.");self.assertNotIn('member_id',self.client.session)
+        self.assertRedirects(response,'/',fetch_redirect_response=False);self.assertNotIn('member_id',self.client.session)
     def test_unknown_and_inactive_generic_response(self):
         unknown=self.client.post('/login/',{'name':'존재하지않는가상교인','phone':'01000000999'})
         self.member.active=False;self.member.save()
         inactive=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
         from .views import GENERIC
-        self.assertEqual(unknown.context['message'],inactive.context['message']);self.assertEqual(unknown.context['message'],GENERIC)
+        self.assertRedirects(unknown,'/',fetch_redirect_response=False);self.assertRedirects(inactive,'/',fetch_redirect_response=False)
         self.assertNotIn('member_id',self.client.session)
     def test_phone_normalization(self):
         self.client.post("/login/", {"name": self.member.name, "phone": self.member.phone})
@@ -79,14 +85,14 @@ class PortalTests(TestCase):
         self.other.phone=self.member.phone;self.other.save()
         response=self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone})
         from .views import GENERIC
-        self.assertContains(response,"기존 이용자는 교인 로그인으로 접속해 주세요.");self.assertNotIn('member_id',self.client.session)
+        self.assertRedirects(response,'/',fetch_redirect_response=False);self.assertNotIn('member_id',self.client.session)
     @override_settings(DEV=False,SMS_API_KEY='',SMS_API_SECRET='',SMS_SENDER='')
     def test_no_sms_roster_login(self):
-        self.assertEqual(self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone}).status_code,200)
+        self.assertEqual(self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone}).status_code,302)
         self.assertNotIn('member_id',self.client.session)
     def test_development_real_member_uses_roster(self):
         self.member.synthetic=False;self.member.save()
-        self.assertEqual(self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone}).status_code,200)
+        self.assertEqual(self.client.post('/login/',{'name':self.member.name,'phone':self.member.phone}).status_code,302)
         self.assertNotIn('member_id',self.client.session)
     def test_author_spoof_ignored(self):
         self.member_login()
@@ -108,7 +114,10 @@ class PortalTests(TestCase):
         self.assertEqual(client.post('/posts/new/',{'title':'가상','body':'가상'}).status_code,403)
         self.assertEqual(client.post('/logout/').status_code,403)
     def test_logout(self):
-        self.member_login();self.client.post('/logout/');self.assertEqual(self.client.get('/').status_code,302)
+        self.member_login();response=self.client.post('/logout/');self.assertRedirects(response,'/',fetch_redirect_response=False)
+        self.assertEqual(self.client.get('/').status_code,200)
+        self.assertEqual(self.client.get('/requests/').status_code,403)
+        self.assertNotIn('member_id',self.client.session)
     def test_xss_escaped(self):
         self.member_login();self.client.post('/posts/new/',{'title':'<script>alert(1)</script>','body':'<img src=x onerror=alert(1)>'})
         response=self.client.get(f'/posts/{Post.objects.get().pk}/')
@@ -157,7 +166,7 @@ class PortalTests(TestCase):
             doc=Document.objects.create(case=self.case,title='가상 PDF',original=SimpleUploadedFile('original.pdf',b'%PDF-1.4 synthetic'),reading=SimpleUploadedFile('reading.pdf',b'%PDF-1.4 redacted'),source='가상',acquired_on='2026-01-01',excerpt='가상',redaction_checked=True,state='published')
             self.case.state='published';self.case.save()
             self.assertEqual(Path(doc.original.path).stat().st_mode & 0o777,0o600)
-            self.assertEqual(self.client.get(f'/documents/{doc.pk}/reading/').status_code,403)
+            self.assertEqual(self.client.get(f'/documents/{doc.pk}/reading/').status_code,200)
             self.member_login();self.assertEqual(self.client.get(f'/documents/{doc.pk}/reading/').status_code,200)
             self.assertEqual(self.client.get(f'/documents/{doc.pk}/original/').status_code,403)
             doc.redaction_checked=False;doc.save();self.assertEqual(self.client.get(f'/documents/{doc.pk}/reading/').status_code,403)
@@ -216,7 +225,7 @@ class PortalTests(TestCase):
         self.assertEqual(response.status_code,200);self.member.refresh_from_db();self.assertEqual(self.member.phone,'01000000008')
     def test_unknown_otp_no_account_created(self):
         before=Member.objects.count();self.client.post('/login/',{'name':'가상미등록','phone':'01000000999'})
-        self.assertRedirects(self.client.post('/otp/',{'code':'123456'}),'/login/',fetch_redirect_response=False);self.assertEqual(Member.objects.count(),before)
+        self.assertRedirects(self.client.post('/otp/',{'code':'123456'}),'/',fetch_redirect_response=False);self.assertEqual(Member.objects.count(),before)
     @override_settings(ADMIN_MFA_SECRETS={'test-editor':'JBSWY3DPEHPK3PXP'})
     def test_individual_mfa_and_replay(self):
         import base64,hashlib,hmac,struct,time
