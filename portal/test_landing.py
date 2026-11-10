@@ -1,4 +1,7 @@
-"""Public landing regression tests; all supplied media and records are synthetic."""
+"""Public landing, real asset integrity, and isolated synthetic fallback tests."""
+import hashlib
+from unittest.mock import patch
+from django.conf import settings
 from datetime import date, timedelta
 from html.parser import HTMLParser
 from pathlib import Path
@@ -21,7 +24,8 @@ class Links(HTMLParser):
 
 @override_settings(SECURE_SSL_REDIRECT=False)
 class LandingTests(TestCase):
-    def test_guest_landing_keeps_order_identifiers_and_public_boundary(self):
+    @patch('portal.landing.asset_url', return_value='')
+    def test_guest_landing_keeps_order_identifiers_and_public_boundary(self, _asset_url):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
         html = response.content.decode()
@@ -50,10 +54,12 @@ class LandingTests(TestCase):
     def test_local_media_presence_and_missing_poster_do_not_break_home(self):
         with TemporaryDirectory() as directory, self.settings(
             STATICFILES_DIRS=[directory],
+            STATICFILES_FINDERS=['django.contrib.staticfiles.finders.FileSystemFinder'],
             STORAGES={'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
                       'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}},
             STATIC_ROOT=directory + '/collected',
         ):
+            (Path(directory) / 'collected').mkdir()
             folder = Path(directory) / 'portal/videos'; folder.mkdir(parents=True)
             first = VIDEOS[0]
             (folder / first['filename']).write_bytes(b'synthetic-media-placeholder-not-playable')
@@ -114,8 +120,7 @@ class LandingTests(TestCase):
         for record in response.context['recent_records']:
             self.assertTrue(record['is_default'])
             self.assertLessEqual(record['basis_on'], date(2026, 11, 4))
-        # Media is absent: these mappings reflect the supplied topic and existing
-        # records, not a claim that anyone has watched the unavailable video.
+        # Linking real media must preserve the existing related-record mapping.
         self.assertEqual([e['key'] for e in response.context['home_videos'][1]['related']], ['T05', 'T18', 'T63'])
         for group in [*response.context['home_videos'], *response.context['home_issues']]:
             for entry in group['related']:
@@ -123,3 +128,43 @@ class LandingTests(TestCase):
                 self.assertEqual(target.status_code, 200)
                 self.assertContains(target, entry['key'])
         self.assertEqual(ProgressRecord.objects.count(), 0)
+
+    def test_three_real_videos_preserve_uploads_and_activate_the_right_cards(self):
+        expected = (
+            ('questions', 'church-questions.mp4', '14514778b8c14a0e59dd8f912938696d69bc47119eb98e25da40e74fb8f7b0ad'),
+            ('offering', 'offering-and-restoration.mp4', 'd468bd1b0de3507bb6a600237b7443568c374f5ee876348f19ac94ab85004221'),
+            ('example', 'prayer-and-service.mp4', '287552bc534208da2734e758c205041318ce6b418c5841d07b7f22d3a37c81f7'),
+        )
+        response = self.client.get('/')
+        self.assertContains(response, '<video ', count=3)
+        self.assertNotContains(response, '영상 준비 중')
+        self.assertContains(response, 'controls playsinline preload="none"', count=3)
+        self.assertNotContains(response, ' autoplay')
+        videos = response.context['home_videos']
+        for item, (key, filename, digest) in zip(videos, expected):
+            with self.subTest(key=key):
+                self.assertEqual((item['key'], item['filename']), (key, filename))
+                binary = settings.BASE_DIR / 'portal/static/portal/videos' / filename
+                self.assertEqual(hashlib.sha256(binary.read_bytes()).hexdigest(), digest)
+                self.assertTrue(item['url'].startswith('/static/portal/videos/'))
+                self.assertTrue(item['url'].endswith('.mp4'))
+                self.assertTrue(item['poster_url'].endswith('.jpg'))
+                poster = settings.BASE_DIR / 'portal/static/portal/videos' / item['poster']
+                self.assertTrue(poster.read_bytes().startswith(b'\xff\xd8'))
+        html = response.content.decode()
+        for invalid in ('sediment://', 'blob/', '/workspace/', 'chatgpt.com', 'sandbox:'):
+            self.assertNotIn(invalid, html)
+
+    def test_collected_only_assets_activate_without_source_files(self):
+        from .landing import asset_url
+        with TemporaryDirectory() as directory, self.settings(
+            STATICFILES_DIRS=[],
+            STATICFILES_FINDERS=['django.contrib.staticfiles.finders.FileSystemFinder'],
+            STORAGES={'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+                      'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}},
+            STATIC_ROOT=directory,
+        ):
+            folder = Path(directory) / 'portal/videos'; folder.mkdir(parents=True)
+            (folder / 'church-questions.mp4').write_bytes(b'synthetic-collected-asset')
+            self.assertEqual(asset_url('portal/videos/church-questions.mp4'), '/static/portal/videos/church-questions.mp4')
+            self.assertEqual(asset_url('portal/videos/missing.mp4'), '')

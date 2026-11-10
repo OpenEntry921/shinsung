@@ -7,15 +7,15 @@ from .reading_registry import legacy_reading_entries
 VIDEOS = (
     dict(key='questions', title='교회에 묻는 다섯 가지 질문',
          description='고소 이후의 회복, 헌신, 참여와 교회 운영에 관한 질문입니다.',
-         filename='권한만큼_책임도_묻습니다_82초_릴스.mp4',
+         filename='church-questions.mp4',
          poster='questions.jpg', related=('T24', 'T33', 'T32')),
     dict(key='offering', title='목적헌금의 본질을 훼손하지 마십시오',
          description='목적헌금의 실제 지출과 원심 판단, 복직 요청과 바로잡는 책임을 살펴봅니다.',
-         filename='본질과_책임_복직과_바로잡는_용기.mp4',
+         filename='offering-and-restoration.mp4',
          poster='offering.jpg', related=('T05', 'T18', 'T63')),
     dict(key='example', title='누가 매일 나오시라고 합니까?',
          description='베드로전서의 권면과 예배·사역에 참여하는 지도자의 본을 묻습니다.',
-         filename='누가_매일_나오시라고_합니까_참석현황_추가.mp4',
+         filename='prayer-and-service.mp4',
          poster='example.jpg', related=('T02', 'T47')),
 )
 ISSUES = (
