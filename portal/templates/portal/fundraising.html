@@ -1,0 +1,48 @@
+<section id="fundraising" class="fundraising-section" aria-labelledby="fundraising-title" tabindex="-1">
+<div class="fundraising-reading">
+<p class="section-label">교회 회복을 위한 자발적 모금 안내</p>
+<h2 id="fundraising-title">우리가 사랑하는 교회, 함께 책임지고 지켜가겠습니다</h2>
+<p class="fundraising-independent">교회 공식 모금이 아닌, 취지에 공감하는 성도들의 자발적 모금입니다.</p>
+<div class="fundraising-body">
+<p>우리가 바라는 것은 누군가의 승리로 끝나는 교회가 아닙니다.</p>
+<p>성도들이 안심하고 예배드리고, 서로의 안부를 묻고, 다음 세대에게 기쁜 마음으로 물려줄 수 있는 교회입니다. 질문하는 목소리가 존중받고, 공동체의 중요한 결정에 충분한 설명과 책임이 따르는 교회입니다.</p>
+<p>지금의 갈등을 바라보며 많은 성도님께서 마음 아파하셨을 것입니다. 드러내어 말하지 못했어도, 교회를 걱정하며 기도해 오신 마음이 있다는 것을 알고 있습니다.</p>
+<p>기도하며 기다리는 마음과 함께, 사실을 확인하고 책임을 분명히 묻는 행동도 필요하다고 생각합니다.</p>
+<p>우리는 그동안의 자료와 경과를 바탕으로, 사회법을 통한 판단을 구하고자 합니다. 서로 다른 주장 속에서 무엇이 사실인지, 어떤 절차와 책임을 바로 세워야 하는지 확인하기 위한 과정입니다. 우리 역시 확인된 사실에 근거해 주장하고, 그 판단을 성실하게 마주하겠습니다.</p>
+<p>이 과정에는 변호사 상담과 선임, 소송 진행, 증거자료 정리 등에 비용이 필요합니다. 몇 사람의 부담만으로는 감당하기 어려운 현실적인 문제입니다.</p>
+<p><strong>이 비용은 교회 헌금이나 교회 재정으로 충당하지 않겠습니다.</strong> 취지에 공감하는 성도님들의 자발적인 참여로 마련하고자 합니다.</p>
+<p>각자의 형편과 마음에 따라 십시일반 힘을 보태 주십시오. 참여 금액의 크기로 마음의 무게를 판단하지 않겠습니다. 작은 정성도 이 과정을 이어가는 소중한 힘이 됩니다.</p>
+<p><strong>모금 참여 여부가 신앙이나 교회를 사랑하는 마음의 기준이 될 수는 없습니다.</strong> 경제적인 참여가 어려우셔도 부담 갖지 않으셔도 됩니다. 자료를 살펴봐 주시는 일, 잘못된 부분을 짚어 주시는 일, 기도로 함께해 주시는 일도 우리에게 필요합니다.</p>
+
+<h3>맡겨주신 마음에, 투명한 운영으로 답하겠습니다</h3>
+<p>모금은 별도로 마련하는 카카오뱅크 모임통장을 통해 진행할 예정입니다.</p>
+<ul>
+<li>모금 목적은 이번 법적 대응에 필요한 비용 마련입니다.</li>
+<li>계좌 관리 담당자와 지출 확인 담당자를 안내하겠습니다.</li>
+<li>모금 총액과 지출 내역을 정기적으로 공유하되, 참여자의 이름과 개별 금액은 동의 없이 공개하지 않겠습니다.</li>
+<li>법적 대응과 관계없는 용도로 사용하지 않겠습니다.</li>
+<li>목적을 변경해야 하거나 절차 종료 후 잔액이 남는 경우에는, 처리 방안을 사전에 안내하고 참여자의 의견을 구하겠습니다.</li>
+</ul>
+<p>모금 계좌는 준비되는 대로 이곳에 안내하겠습니다.<br>계좌 공개 시 예금주, 관리 담당자, 문의 방법도 함께 안내하겠습니다.</p>
+
+<h3>서로의 짐을 조금씩 나누어 주십시오</h3>
+<p>우리가 함께 보태는 것은 법적 대응에 필요한 비용이자, 교회의 문제를 외면하지 않고 끝까지 살피겠다는 마음입니다.</p>
+<p>갈등이 오래 이어질수록 지치기 쉽습니다. 그렇기에 서로의 짐을 조금씩 나누고자 합니다.</p>
+<p>사실을 확인하고, 책임을 묻고, 바로잡아야 할 것을 바로잡는 과정에 함께해 주십시오. 우리가 사랑하는 교회가 다시 서로를 믿고 예배하는 공동체로 나아갈 수 있도록, 여러분의 마음을 보태 주십시오.</p>
+</div>
+<div class="fundraising-account" aria-label="모금 계좌 안내">
+{% include 'portal/fundraising_status.html' %}
+{% if fundraising.account_ready %}
+<dl>
+<dt>계좌번호</dt><dd id="fundraising-account-number">{{ fundraising.account_number }}</dd>
+<dt>예금주</dt><dd>{{ fundraising.account_holder }}</dd>
+{% if fundraising.manager %}<dt>관리 담당자</dt><dd>{{ fundraising.manager }}</dd>{% endif %}
+{% if fundraising.contact %}<dt>문의 방법</dt><dd>{{ fundraising.contact }}</dd>{% endif %}
+</dl>
+<button type="button" data-copy-fundraising-account hidden>계좌번호 복사</button>
+<p class="fundraising-copy-result" role="status" aria-live="polite" aria-atomic="true"></p>
+<noscript><p>표시된 계좌번호를 직접 선택해 복사해 주세요.</p></noscript>
+{% endif %}
+</div>
+</div>
+</section>
