@@ -5,14 +5,15 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const base = process.env.LANDING_BASE_URL || 'http://127.0.0.1:8001';
 const artifacts = process.env.LANDING_ARTIFACTS || '/tmp/laity-landing-artifacts';
-const ready = process.env.LANDING_MEDIA === 'ready';
+const ready = process.env.LANDING_MEDIA !== 'absent';
 fs.mkdirSync(artifacts, { recursive: true });
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
   const results = [];
   try {
     for (const width of [1440, 390]) {
-      const context = await browser.newContext({ viewport: { width, height: width === 1440 ? 1000 : 844 } });
+      const context = await browser.newContext({ viewport: { width, height: width === 1440 ? 1000 : 844 },
+        extraHTTPHeaders: process.env.LANDING_FORWARDED_HTTPS === 'true' ? { 'X-Forwarded-Proto': 'https' } : {} });
       const page = await context.newPage();
       const errors = [], mediaRequests = [], failures = [];
       page.on('pageerror', e => errors.push(e.message));
@@ -83,7 +84,7 @@ fs.mkdirSync(artifacts, { recursive: true });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       assert.deepEqual(failures, []);
       assert.deepEqual(errors, []);
-      results.push({ width, media: ready ? 'synthetic test fixtures' : 'absent', timeline: 72, initialMediaRequests, anchorsAndBack: 'pass', keyboard: 'pass', playback: ready ? 'play/pause/seek/fullscreen pass' : 'not applicable', consoleErrors: errors, overflow: false });
+      results.push({ width, media: ready ? 'installed media' : 'absent', timeline: 72, initialMediaRequests, anchorsAndBack: 'pass', keyboard: 'pass', playback: ready ? 'play/pause/seek/fullscreen pass' : 'not applicable', consoleErrors: errors, overflow: false });
       await context.close();
     }
     fs.writeFileSync(path.join(artifacts, ready ? 'ready-results.json' : 'pending-results.json'), JSON.stringify(results, null, 2));
