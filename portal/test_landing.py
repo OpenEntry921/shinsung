@@ -1,0 +1,125 @@
+"""Public landing regression tests; all supplied media and records are synthetic."""
+from datetime import date, timedelta
+from html.parser import HTMLParser
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from django.test import TestCase, override_settings
+from django.utils import timezone
+from .landing import VIDEOS
+from .models import ProgressRecord
+from .reading_registry import reading_entries
+
+
+class Links(HTMLParser):
+    def __init__(self):
+        super().__init__(); self.links = []; self.in_timeline = False
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == 'a' and attrs.get('class') == 'timeline-card':
+            self.links.append(attrs['href'])
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class LandingTests(TestCase):
+    def test_guest_landing_keeps_order_identifiers_and_public_boundary(self):
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertContains(response, '권한만큼,')
+        self.assertContains(response, '책임도 묻습니다.')
+        self.assertContains(response, 'LAITY · 공동체의 질문')
+        self.assertContains(response, '영상 준비 중', count=3)
+        self.assertNotContains(response, '<video')
+        self.assertNotContains(response, '<source')
+        for private in ('/prepare', '/login/', '/apply/', '/posts/', '/requests/', 'name="phone"', '의견 등록'):
+            self.assertNotIn(private, html)
+        self.assertEqual(response['X-Robots-Tag'], 'noindex, nofollow')
+        self.assertIn("default-src 'self'", response['Content-Security-Policy'])
+        for anchor in ('videos', 'issues', 'timeline', 'dashboard', 'roadmap', 'progress-details', 'roadmap-details'):
+            self.assertEqual(html.count(f'id="{anchor}"'), 1)
+        self.assertLess(html.index('id="videos"'), html.index('id="issues"'))
+        self.assertLess(html.index('id="issues"'), html.index('id="timeline"'))
+        self.assertIn('<details id="progress-details" class="full-details">', html)
+        self.assertIn('<details id="roadmap-details" class="full-details">', html)
+        parser = Links(); parser.feed(html)
+        self.assertEqual(parser.links, [f'/cases/material/{e["key"]}/' for e in reading_entries()])
+        self.assertEqual(len(set(parser.links)), 72)
+        self.assertContains(response, '기존 정리 E01~E30 보기')
+        self.assertEqual(self.client.head('/').status_code, 200)
+
+    def test_local_media_presence_and_missing_poster_do_not_break_home(self):
+        with TemporaryDirectory() as directory, self.settings(
+            STATICFILES_DIRS=[directory],
+            STORAGES={'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+                      'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}},
+            STATIC_ROOT=directory + '/collected',
+        ):
+            folder = Path(directory) / 'portal/videos'; folder.mkdir(parents=True)
+            first = VIDEOS[0]
+            (folder / first['filename']).write_bytes(b'synthetic-media-placeholder-not-playable')
+            html = self.client.get('/').content.decode()
+            self.assertEqual(html.count('<video '), 1)
+            self.assertEqual(html.count('영상 준비 중'), 2)
+            self.assertIn('controls playsinline preload="none"', html)
+            self.assertNotIn(' autoplay', html)
+            self.assertNotIn(' poster=', html)
+            self.assertNotIn('<img ', html)
+            (folder / first['poster']).write_bytes(b'synthetic-poster-placeholder')
+            self.assertContains(self.client.get('/'), 'poster="/static/portal/videos/questions.jpg"')
+            (folder / first['filename']).unlink()
+            html = self.client.get('/').content.decode()
+            self.assertNotIn('<video ', html)
+            self.assertIn('영상 준비 중', html)
+            # A poster alone does not turn a missing film into a broken player.
+            self.assertIn('alt="교회에 묻는 다섯 가지 질문 영상 표지"', html)
+
+    def test_uncollected_manifest_entry_falls_back_to_pending(self):
+        from unittest.mock import patch
+        from django.contrib.staticfiles.storage import staticfiles_storage
+        original_url = staticfiles_storage.url
+        def manifest_url(logical, *args, **kwargs):
+            if logical.startswith('portal/videos/'):
+                raise ValueError('missing manifest entry')
+            return original_url(logical, *args, **kwargs)
+        with patch('portal.landing.finders.find', return_value='synthetic.mp4'), patch(
+            'portal.landing.staticfiles_storage.url', side_effect=manifest_url
+        ):
+            response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '영상 준비 중', count=3)
+        self.assertNotContains(response, '<video')
+
+    def test_three_recent_published_changes_sorted_by_real_modified_time(self):
+        now = timezone.now()
+        records = []
+        for i in range(4):
+            record = ProgressRecord.objects.create(category='issue', title=f'공개 검증 기록 {i}',
+                public_text=f'가상 기록 {i}', basis_on=date(2026, 10, 1),
+                reading_key='T05', status='review', published=True)
+            ProgressRecord.objects.filter(pk=record.pk).update(updated_at=now + timedelta(minutes=i))
+            records.append(record)
+        ProgressRecord.objects.create(category='update', title='비공개 검증 기록',
+            public_text='노출 금지', basis_on=date(2026, 11, 1), published=False)
+        response = self.client.get('/')
+        recent = response.context['recent_records']
+        self.assertEqual([r['title'] for r in recent], [r.title for r in reversed(records[1:])])
+        self.assertContains(response, 'data-recent-record=', count=3)
+        self.assertNotContains(response, '비공개 검증 기록')
+        self.assertContains(response, 'id="dashboard-full"')
+        self.assertContains(response, 'id="roadmap-full"')
+        self.assertEqual(ProgressRecord.objects.count(), 5)
+
+    def test_defaults_and_related_links_are_grounded_in_existing_records(self):
+        response = self.client.get('/')
+        for record in response.context['recent_records']:
+            self.assertTrue(record['is_default'])
+            self.assertLessEqual(record['basis_on'], date(2026, 11, 4))
+        # Media is absent: these mappings reflect the supplied topic and existing
+        # records, not a claim that anyone has watched the unavailable video.
+        self.assertEqual([e['key'] for e in response.context['home_videos'][1]['related']], ['T05', 'T18', 'T63'])
+        for group in [*response.context['home_videos'], *response.context['home_issues']]:
+            for entry in group['related']:
+                target = self.client.get(f'/cases/material/{entry["key"]}/')
+                self.assertEqual(target.status_code, 200)
+                self.assertContains(target, entry['key'])
+        self.assertEqual(ProgressRecord.objects.count(), 0)

@@ -1,0 +1,3 @@
+<section aria-labelledby="roadmap-full"><h2 id="roadmap-full">해결 절차 로드맵</h2>
+<p>사건별 진행 단계는 다를 수 있습니다. 마지막 단계는 대응 필요성과 방법을 검토하는 단계이며 소송이나 외부 공개로 자동 연결되지 않습니다.</p>
+<ol class="roadmap">{% for number, title, stage in roadmap %}<li class="card"><h3>{{ title }}</h3><p>{{ stage.get_status_display|default:'진행 상태 등록 전' }}</p><p>{% if stage.explanation %}{{ stage.explanation }}{% elif number == 1 %}자료의 출처와 날짜, 확인할 사실을 정리합니다.{% elif number == 2 %}양측의 설명·반론과 교인 의견을 같은 기준으로 받습니다.{% elif number == 3 %}확인할 질문과 필요한 시정 내용을 구체적으로 정리합니다.{% elif number == 4 %}답변의 근거를 살펴보고 확인된 이행을 기록합니다.{% else %}남은 쟁점과 조정·교단 절차·법적 대응의 필요성을 검토합니다.{% endif %}</p>{% if stage %}<small>기준일 {{ stage.basis_on }}</small>{% endif %}</li>{% endfor %}</ol></section>

@@ -75,7 +75,8 @@ class IntegratedReadingTests(TestCase):
             self.assertTrue('2026년 11월 4일' in body)
             self.assertTrue('원문 보기(개인정보 가림)' in body or '개인정보 가림 사본 연결 확인 필요' in body or '이번 공개 자료에 미포함' in body)
             self.assertFalse(re.search(r'href="[^"]*/documents/',body))
-            self.assertTrue('성도님의 목소리' in body)  # Shared header still present.
+            self.assertIn('LAITY', body)  # Shared public brand remains present.
+            self.assertIn('공동체의 질문', body)
             self.assertTrue('no-store' in response['Cache-Control'])
         self.assertEqual(tuple(e['key'] for e in reading_entries()),TIMELINE_KEYS)
     def test_legacy_threads_posts_requests_and_direct_links_never_move(self):

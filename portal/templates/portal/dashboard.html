@@ -1,5 +1,5 @@
 {% load timeline_tags %}
-<section aria-labelledby="dashboard"><h2 id="dashboard">공동 상황판</h2>
+<section aria-labelledby="dashboard-full"><h2 id="dashboard-full">공동 상황판</h2>
 <p>운영자가 게시한 기록을 먼저 표시하고, 사건 자료에 따른 기본 검토 항목을 함께 제공합니다. 기록·우리의 평가·질의안을 구분하며 답변 미확인은 답변 거부나 잘못의 인정을 뜻하지 않습니다.</p>
 <div class="dashboard-grid">{% for label, records in dashboard_groups %}<section class="card"><h3>{{ label }}</h3>
 {% for record in records %}<article class="dashboard-record" data-record="{{ record.id }}" style="border-top:1px solid var(--line);padding:18px 0;overflow-wrap:anywhere">

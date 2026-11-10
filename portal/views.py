@@ -52,9 +52,12 @@ def cases(request):
     counts = dict(CaseComment.objects.filter(hidden=False, deleted_at=None).values('reading_key').annotate(n=Count('pk')).values_list('reading_key', 'n')) if request.member else {}
     entries = reading_entries()
     for entry in entries: entry['count'] = counts.get(entry['key'], 0)
+    from .landing import landing_context
+    groups = dashboard_groups()
     return render(request, 'portal/cases.html', {
+        **landing_context(entries, groups),
         'timeline_entries': entries,
-        'dashboard_groups': dashboard_groups(),
+        'dashboard_groups': groups,
         'roadmap': [(n, title, RoadmapStage.objects.filter(step=n).first()) for n, title in RoadmapStage.STEPS],
     })
 
