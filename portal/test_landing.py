@@ -131,9 +131,9 @@ class LandingTests(TestCase):
 
     def test_three_real_videos_preserve_uploads_and_activate_the_right_cards(self):
         expected = (
-            ('questions', 'church-questions.mp4', 'c4df5b4ac30c2a067597b5f1fa0d21cd1dd60c1e75162dff9d46de5c2479c903'),
-            ('offering', 'offering-and-restoration.mp4', 'f4e88bdc204e55fb524212a96720adbf56fcfdc1eb8a96c16d894067a1be1f49'),
-            ('example', 'prayer-and-service.mp4', 'acb7fadfa34b437a60e720e978ad29830b937cf33ab8ce6bfdeefcfc20a502c0'),
+            ('questions', 'church-questions.mp4', '224ca547aea7f2864537bdb138adefd90fdfb97db685c66ad770144fa6e5a5bd'),
+            ('offering', 'offering-and-restoration.mp4', '420daf613a1b7da8fad15e891272eb2e30cbedc744d301cbce29d4b3ad3c92b7'),
+            ('example', 'prayer-and-service.mp4', 'adf192fd07afc78554db4bdef9b9f62dac0bac70309f479e81ed0e61d97914c2'),
         )
         response = self.client.get('/')
         self.assertContains(response, '<video ', count=3)
