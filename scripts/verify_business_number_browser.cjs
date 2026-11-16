@@ -1,10 +1,11 @@
-// Local public-section checks. Uses the existing app; does not write application data.
+// Run against local Gunicorn/WhiteNoise. No application data is written.
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const base = process.env.BUSINESS_NUMBER_BASE_URL || 'http://127.0.0.1:18081';
-const artifacts = process.env.BUSINESS_NUMBER_ARTIFACTS || '/tmp/business-number-artifacts';
+const base = process.env.BUSINESS_NUMBER_BASE_URL || 'http://127.0.0.1:18082';
+const artifacts = process.env.BUSINESS_NUMBER_ARTIFACTS || '/tmp/business-number-evidence';
+const expectedImages = Number(process.env.BUSINESS_NUMBER_IMAGES || 1);
 fs.mkdirSync(artifacts, { recursive: true });
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
@@ -27,40 +28,44 @@ fs.mkdirSync(artifacts, { recursive: true });
       assert.equal(await page.locator('#fundraising').count(), 1);
       assert.equal(await page.locator('a[href^="/prepare"]').count(), 0);
       assert.equal(await page.evaluate(() => document.querySelector('.hero-description').nextElementSibling.className), 'business-number-card');
-      const button = page.getByRole('link', { name: '견적서의 번호, 직접 확인하기', exact: true });
-      await page.screenshot({ path: path.join(artifacts, 'card-' + width + '.png'), fullPage: false });
-      await button.focus();
-      await page.keyboard.press('Enter');
+      await page.screenshot({ path: path.join(artifacts, 'card-' + width + '.png') });
+      const button = page.getByRole('link', { name: '견적서와 조회 결과 확인하기', exact: true });
+      await button.focus(); await page.keyboard.press('Enter');
       await page.waitForURL('**/#business-number-check');
-      assert.ok(await page.locator('#business-number-title').evaluate(el => {
-        const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom < innerHeight;
-      }));
+      assert.ok(await page.locator('#business-number-title').evaluate(el => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom < innerHeight; }));
       const section = page.locator('#business-number-check');
-      assert.equal(await section.locator('img').count(), 1);
-      assert.ok(await section.locator('img').evaluate(img => img.complete && img.naturalWidth === 1350));
-      assert.equal(await section.getByText('해당 홈택스 조회 화면: 미확보', { exact: true }).count(), 2);
+      assert.equal(await section.locator('img').count(), expectedImages);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-      const table = section.locator('.business-number-table').first();
-      if (width < 600) {
-        assert.ok(await table.evaluate(el => el.scrollWidth > el.clientWidth));
-        await table.evaluate(el => { el.scrollLeft = el.scrollWidth; });
-        assert.ok(await table.evaluate(el => el.scrollLeft > 0));
-        await table.evaluate(el => { el.scrollLeft = 0; });
+      await page.screenshot({ path: path.join(artifacts, 'section-' + width + '.png') });
+      const rows = page.locator('.business-number-comparison tbody tr');
+      assert.equal(await rows.count(), 3);
+      const expected = [['2021. 9. 25.','581-16-00460','51,890,000원'],['2023. 10. 10.','581-16-00460','12,090,000원'],['2024. 2. 25.','128-03-18446','15,444,000원']];
+      for (let i = 0; i < 3; i++) {
+        for (const text of expected[i]) assert.ok((await rows.nth(i).innerText()).includes(text));
+        assert.equal(await rows.nth(i).evaluate(el => getComputedStyle(el).display), width < 700 ? 'block' : 'table-row');
       }
-      await page.screenshot({ path: path.join(artifacts, 'section-' + width + '.png'), fullPage: false });
-      for (const linkName of ['비교 부분 확대 보기 (새 탭)', '견적서 전체 보기 (개인정보 가림, 새 탭)']) {
-        const link = section.getByRole('link', { name: linkName, exact: true });
+      await page.locator('.business-number-comparison').scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(artifacts, 'comparison-' + width + '.png') });
+      const links = section.locator('[data-business-evidence]');
+      for (let i = 0; i < await links.count(); i++) {
+        const link = links.nth(i);
         const href = await link.getAttribute('href');
-        assert.match(href, /\/static\/portal\/business-number\/estimate-2024-(detail|redacted)\.[a-f0-9]{12}\.jpg/);
-        const popupPromise = context.waitForEvent('page');
-        await link.click();
-        const popup = await popupPromise;
-        await popup.waitForLoadState('load');
-        assert.ok(await popup.locator('img').evaluate(img => img.complete && img.naturalWidth > 0));
-        await popup.close();
+        assert.match(href, /\/static\/portal\/business-number\/[^/]+\.[a-f0-9]{12}\.(jpg|png)/);
+        const imageResponse = await context.request.get(base + href);
+        assert.equal(imageResponse.status(), 200);
+        assert.match(imageResponse.headers()['content-type'], /^image\//);
+        await link.focus(); await page.keyboard.press('Enter');
+        const dialog = page.locator('#business-number-dialog');
+        await dialog.waitFor({ state: 'visible' });
+        await page.waitForFunction(() => { const im = document.querySelector('.business-number-dialog-image img'); return im && im.complete && im.naturalWidth > 0; });
+        await dialog.getByRole('button', { name: '원본 크기로 보기' }).click();
+        assert.equal(await dialog.getByRole('button', { name: '화면에 맞추기' }).getAttribute('aria-pressed'), 'true');
+        await page.screenshot({ path: path.join(artifacts, 'zoom-' + width + '-' + i + '.png') });
+        if (i % 2 === 0) await page.keyboard.press('Escape');
+        else await dialog.getByRole('button', { name: '닫기', exact: true }).click();
+        assert.equal(await dialog.isVisible(), false);
+        assert.equal(await link.evaluate(el => el === document.activeElement), true);
       }
-      const official = section.getByRole('link', { name: '홈택스 공식 사이트에서 확인하기 (새 탭)', exact: true });
-      assert.equal(await official.getAttribute('href'), 'https://www.hometax.go.kr');
       await page.goto(base + '/#business-number-check');
       assert.ok(await page.locator('#business-number-title').evaluate(el => el.getBoundingClientRect().top >= 0));
       const caseHref = await page.locator('.timeline-card').first().getAttribute('href');
@@ -68,12 +73,21 @@ fs.mkdirSync(artifacts, { recursive: true });
       const protectedResponse = await context.request.get(base + '/prepare/events/T01/', { maxRedirects: 0 });
       assert.equal(protectedResponse.status(), 302);
       assert.equal(protectedResponse.headers().location, '/prepare/');
-      assert.deepEqual(errors, []);
-      assert.deepEqual(failures, []);
-      assert.deepEqual(mp4, []);
-      results.push({ width, status:'pass', overflow:false, errors, failures, initialMP4Requests:mp4.length, imageZoom:'pass', keyboardAnchor:'pass' });
+      assert.deepEqual(errors, []); assert.deepEqual(failures, []); assert.deepEqual(mp4, []);
+      results.push({ width, status:'pass', imageCount:expectedImages, mobileCards:width < 700, dialogKeyboardCloseAndFocus:'pass', overflow:false, errors, failures, initialMP4Requests:0 });
       await context.close();
     }
+    const nojs = await browser.newContext({ javaScriptEnabled:false, viewport:{width:390,height:844} });
+    const page = await nojs.newPage();
+    await page.goto(base + '/');
+    await page.getByRole('link', { name: '견적서와 조회 결과 확인하기', exact: true }).click();
+    assert.equal(new URL(page.url()).hash, '#business-number-check');
+    const href = await page.locator('[data-business-evidence]').first().getAttribute('href');
+    await page.locator('[data-business-evidence]').first().click();
+    assert.equal(new URL(page.url()).pathname, href);
+    assert.ok(await page.locator('img').evaluate(el => el.complete && el.naturalWidth > 0));
+    results.push({ javaScriptDisabled:'anchor and real image fallback pass' });
+    await nojs.close();
     fs.writeFileSync(path.join(artifacts, 'browser-results.json'), JSON.stringify(results, null, 2));
     console.log(JSON.stringify(results, null, 2));
   } finally { await browser.close(); }
