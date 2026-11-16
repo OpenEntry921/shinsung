@@ -36,8 +36,10 @@ with override_settings(SECURE_SSL_REDIRECT=False), patch.dict(FUNDRAISING, dict(
       assert.equal(response.headers()['x-robots-tag'], 'noindex, nofollow');
       const card = page.locator('.fundraising-card');
       const action = card.getByRole('link', { name: '모금 취지와 참여 안내' });
+      // The new requested notice precedes this card; retain scroll-accessible operation.
+      await action.scrollIntoViewIfNeeded();
       const box = await action.boundingBox();
-      assert.ok(box.y >= 0 && box.y + box.height <= page.viewportSize().height, 'fundraising action must be in the first viewport');
+      assert.ok(box.y >= 0 && box.y + box.height <= page.viewportSize().height, 'fundraising action must be visible after scrolling');
       assert.equal(await page.locator('.fundraising-status').count(), 2);
       for (const status of await page.locator('.fundraising-status').all()) assert.match(await status.innerText(), /카카오뱅크 모임통장 · 계좌 준비 중/);
       assert.equal(await page.locator('[data-copy-fundraising-account],#fundraising-account-number,.fundraising-account dt').count(), 0);
@@ -66,7 +68,7 @@ with override_settings(SECURE_SSL_REDIRECT=False), patch.dict(FUNDRAISING, dict(
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       assert.deepEqual(errors, []); assert.deepEqual(failures, []);
       assert.equal(mediaRequests.length, 0);
-      results.push({ width, firstViewportAction: 'pass', keyboardAndFragment: 'pass', state: 'preparing, no account fields or copy button', existingLinks: 'pass', overflow: false, consoleErrors: [], initialMediaRequests: 0 });
+      results.push({ width, scrolledCardAction: 'pass', keyboardAndFragment: 'pass', state: 'preparing, no account fields or copy button', existingLinks: 'pass', overflow: false, consoleErrors: [], initialMediaRequests: 0 });
       await context.close();
     }
     // An intercepted local test page exercises the future published state.

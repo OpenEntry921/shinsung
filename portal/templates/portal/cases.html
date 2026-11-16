@@ -2,13 +2,14 @@
 {% load static %}
 {% block title %}권한만큼, 책임도 묻습니다 | LAITY · 공동체의 질문{% endblock %}
 {% block body_class %}landing{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'portal/fundraising.css' %}"><script defer src="{% static 'portal/fundraising.js' %}"></script><link rel="stylesheet" href="{% static 'portal/landing.css' %}"><script defer src="{% static 'portal/landing.js' %}"></script>{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'portal/business-number.css' %}"><link rel="stylesheet" href="{% static 'portal/fundraising.css' %}"><script defer src="{% static 'portal/fundraising.js' %}"></script><link rel="stylesheet" href="{% static 'portal/landing.css' %}"><script defer src="{% static 'portal/landing.js' %}"></script>{% endblock %}
 {% block content %}
 {% include 'portal/reading_styles.html' %}
 <section class="hero" aria-labelledby="hero-title">
 <p class="section-label">기록에서 시작하는 회복</p>
 <h1 id="hero-title">권한만큼,<br><span>책임도 묻습니다.</span></h1>
 <p class="hero-description">신성커뮤니티교회의 결정과 그 과정을 기록으로 살펴봅니다.<br> 우리가 지키려는 것은 교회의 회복입니다.</p>
+{% include 'portal/business_number_card.html' %}
 {% include 'portal/fundraising_card.html' %}
 <div class="hero-actions"><a class="button" href="#videos">핵심 내용 보기 <span aria-hidden="true">↓</span></a><a class="button secondary" href="#timeline">사건 기록 살펴보기 <span aria-hidden="true">↗</span></a></div>
 {% include 'portal/home_scripture.html' %}
@@ -47,5 +48,6 @@
 <p>첨부 개정본의 {{ timeline_entries|length }}개 항목을 01~72번 순서로 표시합니다. 표시 번호는 고유 식별자나 공식 사건번호가 아니며 기존 사건 URL·의견 연결은 그대로 유지합니다. 날짜 표현은 원문 그대로이며, 반복·기간·미확인 일자를 임의로 확정하거나 다시 정렬하지 않습니다. 사건 구분은 법적으로 사건들이 병합됐다는 의미가 아닙니다.</p>
 <ol class="timeline">{% for entry in timeline_entries %}{% include 'portal/timeline_item.html' %}{% endfor %}</ol>
 <p><a href="{% url 'legacy_cases' %}">기존 정리 E01~E30 보기</a> · 기존 게시글·댓글은 원래 사건번호에 그대로 남습니다.</p></section>
+{% include 'portal/business_number_check.html' %}
 {% include 'portal/fundraising.html' %}
 {% endblock %}
