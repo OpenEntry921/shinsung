@@ -69,7 +69,9 @@ class LandingTests(TestCase):
             self.assertIn('controls playsinline preload="none"', html)
             self.assertNotIn(' autoplay', html)
             self.assertNotIn(' poster=', html)
-            self.assertNotIn('<img ', html)
+            # Evidence images elsewhere do not supply a missing video poster.
+            video_grid = html.split('<div class="video-grid">', 1)[1].split('<section class="landing-section"', 1)[0]
+            self.assertNotIn('<img ', video_grid)
             (folder / first['poster']).write_bytes(b'synthetic-poster-placeholder')
             self.assertContains(self.client.get('/'), 'poster="/static/portal/videos/questions.jpg"')
             (folder / first['filename']).unlink()
