@@ -3,6 +3,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 import hashlib
 import re
+from unittest.mock import patch
+from .business_number import ESTIMATES, QUERIES, business_number_context
 
 from django.conf import settings
 from django.test import TestCase, override_settings
@@ -58,31 +60,48 @@ class BusinessNumberTests(TestCase):
             actual = sum(n * w for n, w in zip(digits[:9], weights)) + digits[8] * 5 // 10
             self.assertEqual(actual, total)
             self.assertEqual((-actual) % 10, check)
-        self.assertIn('4×5 = <strong>119</strong>', html)
+        self.assertIn('= <strong>119</strong>', html)
         self.assertIn('119 + 2 = <strong>121</strong>', html)
-        self.assertIn('검증 숫자 = <strong>9</strong>', html)
-        self.assertIn('계산을 통과한다고 실제 등록된 번호임이 증명되는 것은 아니며', html)
+        self.assertIn('= <strong>9</strong>', html)
+        self.assertIn('검증 계산을 통과하더라도 실제 등록된 번호라는 뜻은 아닙니다.', html)
 
-    def test_evidence_missing_status_and_query_attribution(self):
+    @patch('portal.business_number.asset_url', return_value='')
+    def test_missing_evidence_has_no_broken_or_substitute_image_links(self, _asset):
+        context = business_number_context()
+        self.assertEqual(len(context['missing']), 5)
         html = self.client.get('/').content.decode().split('id="business-number-check"', 1)[1]
-        self.assertIn('다른 견적서 2장과 홈택스 조회 화면 2장은 현재 확보하지 못했습니다.', html)
-        self.assertEqual(html.count('견적서 원문 미확보'), 2)
-        self.assertEqual(html.count('해당 홈택스 조회 화면: 미확보'), 2)
-        self.assertEqual(html.count('사용자 전달 조회기준일자: 2026. 11. 17.'), 2)
+        self.assertEqual(html.count('공개용 견적서 이미지 준비 중'), 3)
+        self.assertEqual(html.count('해당 홈택스 조회 캡처의 공개용 이미지 준비 중'), 2)
+        self.assertNotIn('<img ', html)
+        self.assertNotIn('data-business-evidence data-', html)
+
+    @patch('portal.business_number.asset_url', side_effect=lambda path: '/static/' + path)
+    def test_all_five_reviewed_assets_have_correct_connections(self, _asset):
+        context = business_number_context()
+        self.assertEqual(context['missing'], [])
+        html = self.client.get('/').content.decode().split('id="business-number-check"', 1)[1]
+        self.assertEqual(len(re.findall(r'<img[^>]*src="([^"]+)"[^>]*>', html)), 5)
+        self.assertNotIn('공개용 이미지 준비 중', html)
+        for row in ESTIMATES:
+            self.assertIn('id="' + row['key'] + '"', html)
+            self.assertIn(row['amount'], html)
+            self.assertIn('/static/portal/business-number/' + row['key'] + '-redacted.jpg', html)
+            self.assertIn('/static/portal/business-number/' + row['key'] + '-detail.jpg', html)
+        for row in QUERIES:
+            self.assertIn('/static/portal/business-number/' + row['key'] + '.png', html)
+        self.assertIn('data-business-evidence-close', html)
+        self.assertIn('data-business-evidence-zoom', html)
+
+    def test_query_attribution_and_evidence_boundary(self):
+        html = self.client.get('/').content.decode().split('id="business-number-check"', 1)[1]
         self.assertIn('끝자리 변경 가정 번호: <strong>128-03-18449</strong>', html)
+        self.assertIn('견적서에 없는 번호이며, 마지막 숫자만 변경해 추가 조회한 번호입니다.', html)
         self.assertIn('성도가 전달한 설명·요지', html)
-        self.assertIn('별도 영수증의 내용, 자료 공개 요청·회신 경위, 감사 관련 설명은 관련 원문과 추가 대조가 필요합니다.', html)
+        self.assertIn('별도 영수증과 자료 요청·회신 경위는 추가 증빙과 대조가 필요합니다.', html)
         self.assertIn('href="https://www.hometax.go.kr"', html)
         self.assertNotIn('<blockquote', html)
-        self.assertNotRegex(html, r'<img[^>]*(hometax|2021|2023)')
-        for phrase in ('위법이 드러났다', '가짜 업체다', '위조 견적서다', '사기 또는 횡령이다', '감사가 허위였다', '명예훼손에 해당하지 않는다'):
+        for phrase in ('위법 확정', '가짜 업체', '위조 견적서', '사기', '횡령', '허위 감사', '명예훼손에 해당하지 않는다', '답변 거부'):
             self.assertNotIn(phrase, html)
-        images = re.findall(r'<img[^>]*src="([^"]+)"[^>]*>', html)
-        self.assertEqual(len(images), 1)
-        self.assertIn('estimate-2024-detail', images[0])
-        self.assertIn('비교 부분 확대 보기 (새 탭)', html)
-        self.assertIn('견적서 전체 보기 (개인정보 가림, 새 탭)', html)
-        # Keep the already-public source unchanged; never substitute a private original.
+        # The already-public source remains unchanged; never substitute a private original.
         source = Path(settings.BASE_DIR) / 'static/case-documents/D01.pdf'
-        expected = '1103118c9b9291508394c90b5f40e41b912a02e6d3b9bdeedccadcd30544206c'
-        self.assertEqual(hashlib.sha256(source.read_bytes()).hexdigest(), expected)
+        self.assertEqual(hashlib.sha256(source.read_bytes()).hexdigest(), '1103118c9b9291508394c90b5f40e41b912a02e6d3b9bdeedccadcd30544206c')

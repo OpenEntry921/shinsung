@@ -54,10 +54,12 @@ def cases(request):
     for entry in entries: entry['count'] = counts.get(entry['key'], 0)
     from .landing import landing_context
     from .fundraising import fundraising_context
+    from .business_number import business_number_context
     groups = dashboard_groups()
     return render(request, 'portal/cases.html', {
         **landing_context(entries, groups),
         'fundraising': fundraising_context(),
+        'business_number': business_number_context(),
         'timeline_entries': entries,
         'dashboard_groups': groups,
         'roadmap': [(n, title, RoadmapStage.objects.filter(step=n).first()) for n, title in RoadmapStage.STEPS],
