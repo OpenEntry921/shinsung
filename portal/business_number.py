@@ -11,6 +11,8 @@ QUERIES = (
     dict(key='hometax-1280318449', label='끝자리 변경 가정 번호', number='128-03-18449', check='일치'),
 )
 
+REGISTERED_QUERY = dict(key='hometax-5811600460', label='기존 견적서 기재 번호의 홈택스 조회', number='581-16-00460', date='2026. 11. 18.')
+
 
 def business_number_context():
     estimates = []
@@ -19,5 +21,8 @@ def business_number_context():
         detail = asset_url('portal/business-number/' + row['key'] + '-detail.jpg') if full else ''
         estimates.append({**row, 'url': full, 'detail_url': detail or full})
     queries = [{**row, 'url': asset_url('portal/business-number/' + row['key'] + '.png')} for row in QUERIES]
-    return dict(estimates=estimates, queries=queries,
-                missing=[r for r in [*estimates, *queries] if not r['url']])
+    registered = {**REGISTERED_QUERY, 'url': asset_url('portal/business-number/' + REGISTERED_QUERY['key'] + '.png')}
+    evidence = [*estimates, *queries, registered]
+    return dict(estimates=estimates, queries=queries, registered_query=registered,
+                connected_count=sum(bool(r['url']) for r in evidence), total_count=len(evidence),
+                missing=[r for r in evidence if not r['url']])

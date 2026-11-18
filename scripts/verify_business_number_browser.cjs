@@ -37,6 +37,26 @@ fs.mkdirSync(artifacts, { recursive: true });
       assert.equal(await section.locator('img').count(), expectedImages);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.screenshot({ path: path.join(artifacts, 'section-' + width + '.png') });
+      const tax = section.locator('#hometax-5811600460');
+      assert.equal(await tax.locator('.business-number-tax-status').evaluate(el => getComputedStyle(el).listStyleType), 'none');
+      assert.equal(await tax.locator('.business-number-tax-status span').first().evaluate(el => getComputedStyle(el).display), 'block');
+      const taxText = await tax.innerText();
+      for (const text of ['581-16-00460', '2026. 11. 18.', '부가가치세 일반과세자', '2024년 8월 1일', '실제 거래 당시 과세유형과 증빙 발급 의무']) assert.ok(taxText.includes(text));
+      assert.ok((await section.innerText()).includes('현재 이 페이지에서 연결된 공개 증빙은 ' + expectedImages + '개'));
+      assert.equal(await page.getByText('별도 국세청 조회 증빙이 없어', { exact: false }).count(), 0);
+      await tax.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(artifacts, 'tax-status-' + width + '.png') });
+      const accountability = section.locator('.business-number-accountability');
+      for (const text of ['자신들이 관여한 재정 집행에도 같은 수준의 검증과 설명을 받아들여야 합니다.', '이 불일치는 ‘감사를 통과했다’는 말만으로 해소되지 않습니다.', '공급자 정보와 지급 증빙을 확인했습니까?', '정확한 지급·정산 증빙과 감사에서 확인한 자료를 제시하십시오.']) assert.equal(await accountability.locator('strong').filter({ hasText: text }).count(), 1);
+      for (const [code, number] of [['A01', '7'], ['D01', '40']]) {
+        const link = accountability.locator('a[href*="' + code + '."][href$="#page=' + number + '"]');
+        assert.equal(await link.count(), 1);
+        const href = await link.getAttribute('href');
+        const response = await context.request.head(base + href.split('#')[0]);
+        assert.equal(response.status(), 200);
+        assert.match(response.headers()['content-type'], /^application\/pdf/);
+      }
+      await accountability.screenshot({ path: path.join(artifacts, 'accountability-' + width + '.png') });
       const rows = page.locator('.business-number-comparison tbody tr');
       assert.equal(await rows.count(), 3);
       const expected = [['2021. 9. 25.','581-16-00460','51,890,000원'],['2023. 10. 10.','581-16-00460','12,090,000원'],['2024. 2. 25.','128-03-18446','15,444,000원']];

@@ -1,10 +1,11 @@
+{% load timeline_tags %}
 <section id="business-number-check" class="business-number-section" aria-labelledby="business-number-title" tabindex="-1">
 <div class="business-number-reading">
 <p class="section-label">공사 견적서 사업자등록번호 확인</p>
 <h2 id="business-number-title">여러분, 사업자등록번호의 비밀을 알고 계십니까?</h2>
 <p>사업자등록번호의 마지막 한 자리에는 앞의 아홉 자리로 계산하는 검증 규칙이 있습니다. 제공된 견적서 세 장에는 같은 상호와 대표자명이 기재되어 있지만, 4층 개조공사 견적서의 사업자등록번호만 다릅니다. 이 번호를 계산하고 홈택스에서 조회한 결과를 공개합니다.</p>
 <ul class="business-number-summary"><li>다른 두 견적서: <strong>581-16-00460</strong></li><li>4층 개조공사 견적서: <strong>128-03-18446</strong></li><li>4층 견적서 번호: <strong>검증 숫자 불일치 / 제출된 홈택스 화면상 미등록 안내</strong></li></ul>
-{% if business_number.missing %}<div class="business-number-note"><strong>공개용 증빙 이미지 준비 상태</strong><p>아래 내용은 제공된 사진과 조회 캡처를 읽어 정리했습니다. 일부 공개용 이미지 파일은 아직 연결되지 않았습니다. 해당 항목은 준비 중으로 표시합니다.</p></div>{% endif %}
+{% if business_number.missing %}<div class="business-number-note"><strong>공개용 증빙 이미지 준비 상태</strong><p>현재 연결된 공개 증빙은 {{ business_number.connected_count }}개 / 전체 확인 대상 {{ business_number.total_count }}개입니다. 파일이 없는 항목은 준비 중으로 표시하고, 화면을 직접 대조하지 못한 조회 정보는 사용자 전달 내용으로 구분합니다.</p></div>{% endif %}
 <h3>견적서 비교</h3>
 <p>상호: <strong>선목인테리어</strong> · 대표자명: 김득만으로 읽힙니다. 대표자명과 겹친 도장 부분은 공개 사본에서 가리며, 가려진 글자를 복원하지 않습니다.</p>
 <p>세 견적서에는 같은 상호와 대표자명, 동일한 주소와 연락처가 기재되어 있습니다. 그러나 2024년 2월 25일자 4층 개조공사 견적서에는 다른 사업자등록번호가 적혀 있습니다.</p>
@@ -12,12 +13,22 @@
 <table class="business-number-comparison"><caption>제공된 견적서의 날짜·등록번호·표시 금액 비교</caption><thead><tr><th scope="col">날짜</th><th scope="col">공사 구분</th><th scope="col">견적서 기재 번호</th><th scope="col">표시 금액</th><th scope="col">증빙 보기</th></tr></thead><tbody>
 {% for estimate in business_number.estimates %}<tr><th scope="row" data-label="날짜">{{ estimate.date }}</th><td data-label="공사 구분">{{ estimate.project }}</td><td data-label="기재 번호"><strong>{{ estimate.number }}</strong><br>{{ estimate.check }}</td><td data-label="표시 금액">{{ estimate.amount }}<br>VAT 별도</td><td data-label="증빙 보기"><a href="#{{ estimate.key }}">{% if estimate.url %}견적서 보기{% else %}준비 상태 보기{% endif %}</a></td></tr>{% endfor %}
 </tbody></table>
-<p><strong>581-16-00460</strong>은 검증 숫자 계산 일치만 표시합니다. 별도 국세청 조회 증빙이 없어 실제 등록 여부나 정상 영업 여부를 확인한 것은 아닙니다.</p>
+{% with query=business_number.registered_query %}
+{% if not query.url %}<p class="business-number-label">사용자 전달 조회 내용 · 2026년 11월 18일 캡처 파일 미확보, 원문 화면 미대조</p>{% endif %}
+<p><strong>581-16-00460</strong>은 검증 숫자 계산과 일치합니다. 추가로 제공된 2026년 11월 18일자 홈택스 조회 화면에는 ‘부가가치세 일반과세자’로 표시되며, ‘2024년 08월 01일 간이과세자에서 일반과세자로 전환되었습니다’라는 안내가 있습니다. 다만 이 조회 화면만으로 해당 번호와 견적서상 상호·대표자명의 일치 여부나 개별 공사대금의 신고·납세 여부까지 확인되는 것은 아닙니다.</p>
+<figure id="{{ query.key }}" class="business-number-query">
+<h3>기존 견적서 기재 번호의 홈택스 조회</h3>
+<ul class="business-number-tax-status"><li><span>조회 번호</span><strong>581-16-00460</strong></li><li><span>조회기준일자</span>2026. 11. 18.</li><li><span>화면 표시</span>부가가치세 일반과세자</li><li><span>전환 안내</span>2024년 8월 1일 간이과세자에서 일반과세자로 전환</li></ul>
+{% if query.url %}<a href="{{ query.url }}" data-business-evidence data-evidence-caption="581-16-00460 홈택스 조회, 2026년 11월 18일, 일반과세자 및 2024년 8월 1일 전환 안내" aria-label="581-16-00460 조회 화면 보기"><img src="{{ query.url }}" alt="홈택스 사업자등록상태 조회 581-16-00460, 조회기준일자 2026-11-18, 부가가치세 일반과세자, 2024년 08월 01일 간이과세자에서 일반과세자로 전환 안내" loading="lazy"></a><p><a href="{{ query.url }}" data-business-evidence data-evidence-caption="581-16-00460 홈택스 조회 화면">조회 화면 보기</a></p>{% else %}<p class="business-number-note">581-16-00460 홈택스 조회 캡처 파일 미확보 · 공개용 이미지 준비 중. 위 조회 내용은 사용자 전달 정보로, 실제 화면과 직접 대조하지 못했습니다.</p>{% endif %}
+<figcaption>출처: 제공된 홈택스 사업자등록상태 조회 캡처{% if not query.url %}에 관한 사용자 설명{% endif %}</figcaption>
+<p>2024년 2월 25일자 견적서의 날짜는 화면에 표시된 일반과세 전환일보다 앞섭니다. 실제 거래 당시 과세유형과 증빙 발급 의무는 공사 완료일·공급시기 등 관련 자료로 확인해야 합니다.</p>
+</figure>
+{% endwith %}
 {% for estimate in business_number.estimates %}<figure id="{{ estimate.key }}" class="business-number-evidence">
 <h4>{{ estimate.date }} {{ estimate.project }} 견적서</h4>
 {% if estimate.url %}<a href="{{ estimate.detail_url }}" data-business-evidence data-evidence-caption="{{ estimate.date }} {{ estimate.project }} 견적서 등록번호 확대" aria-label="{{ estimate.project }} 견적서 등록번호 확대"><img src="{{ estimate.detail_url }}" alt="{{ estimate.date }} {{ estimate.project }} 견적서의 날짜와 등록번호 {{ estimate.number }}. 주소·전화·팩스와 도장은 파일에서 가려져 있음" loading="lazy"></a><p><a href="{{ estimate.detail_url }}" data-business-evidence data-evidence-caption="{{ estimate.project }} 견적서 등록번호 확대">등록번호 확대 보기</a> · <a href="{{ estimate.url }}" data-business-evidence data-evidence-caption="{{ estimate.date }} {{ estimate.project }} 견적서 전체, 표시 금액 {{ estimate.amount }}, VAT 별도">공개용 전체 이미지 보기</a></p>
 {% else %}<p class="business-number-note">공개용 견적서 이미지 준비 중 · {{ estimate.date }} / {{ estimate.number }}</p>{% endif %}
-<figcaption>출처: 제공된 견적서 사진. {{ estimate.number }} · 표시 금액 {{ estimate.amount }}, VAT 별도.{% if estimate.key == 'estimate-2024' %} 현재 연결된 이미지는 기존 공개 가림 사본 D01 40쪽입니다.{% endif %}</figcaption>
+<figcaption>출처: 제공된 견적서 사진. {{ estimate.number }} · 표시 금액 {{ estimate.amount }}, VAT 별도.{% if estimate.key == 'estimate-2024' and estimate.url %} 현재 연결된 이미지는 기존 공개 가림 사본 D01 40쪽입니다.{% endif %}</figcaption>
 </figure>{% endfor %}
 <h3>사업자등록번호의 마지막 숫자는 어떻게 정해질까요?</h3>
 <p>앞의 아홉 자리에 정해진 가중치를 곱하고 추가 계산을 하면 마지막 검증 숫자를 구할 수 있습니다.</p>
@@ -35,7 +46,7 @@
 <p>검증 계산: {{ query.check }}<br>홈택스 화면: <strong>미등록 안내</strong><br>조회기준일자: 2026. 11. 17.</p>
 {% if query.key == 'hometax-1280318449' %}<p>견적서에 없는 번호이며, 마지막 숫자만 변경해 추가 조회한 번호입니다. 업체가 제시한 정정 번호가 아닙니다.</p>{% endif %}
 {% if query.url %}<a href="{{ query.url }}" data-business-evidence data-evidence-caption="{{ query.label }} {{ query.number }} 홈택스 조회 화면, 2026년 11월 17일" aria-label="{{ query.number }} 홈택스 조회 화면 확대"><img src="{{ query.url }}" alt="사업자등록상태 조회: {{ query.number }}, 국세청에 등록되지 않은 사업자등록번호입니다. 조회기준일자 2026-11-17. 상단에 증빙자료로서 법적인 효력이 없다는 안내가 있음" loading="lazy"></a>{% else %}<p class="business-number-note">해당 홈택스 조회 캡처의 공개용 이미지 준비 중</p>{% endif %}
-<figcaption>출처: 제공된 홈택스 조회 캡처 · {{ query.number }} · 2026-11-17</figcaption></figure>{% endfor %}
+<figcaption>출처: 제공된 홈택스 조회 캡처 · {{ query.number }} · 2026-11-17</figcaption>{% if query.url %}<p><a href="{{ query.url }}" data-business-evidence data-evidence-caption="{{ query.label }} {{ query.number }} 홈택스 조회 화면">조회 화면 보기</a></p>{% endif %}</figure>{% endfor %}
 <p>마지막 숫자 6을 9로 바꾸어도 제출된 조회 화면에서는 등록된 번호로 확인되지 않았습니다. 그렇다면 견적서의 어느 부분이 잘못된 것일까요? 정확한 공급자 번호와 작성 경위를 원본 자료로 확인할 필요가 있습니다.</p>
 <p class="business-number-note">위 결과는 2026년 11월 17일자 제출된 조회 화면에 근거합니다. 공사 당시 등록 상태나 고의적인 허위 기재 여부까지 확정하는 자료는 아닙니다. 홈택스는 해당 조회가 증빙자료로서 법적인 효력이 없다고 안내합니다.</p>
 <p><a href="https://www.hometax.go.kr" target="_blank" rel="noopener noreferrer">홈택스 공식 사이트 (새 탭)</a></p>
@@ -43,10 +54,23 @@
 <p class="business-number-label">성도가 전달한 설명·요지</p>
 <p>해당 성도는 견적서 세 장과 별도의 영수증 한 장을 동일 업체의 자료로 설명하면서, 4층 공사 견적서의 공급자등록번호만 다르다고 지적했습니다. 또한 감사를 통과했다는 설명과 별개로, 자신이 요청한 4층 공사 영수증은 아직 제공받지 못했다고 전했습니다.</p>
 <p>이 성도는 초기 문제 제기 당시 관련 자료를 충분히 확보하지 못했고, 이후 카페 전기공사 영수증과 답변서에 첨부된 견적서 세 장을 확인하면서 번호 불일치에 의문을 갖게 되었다고 설명했습니다.</p>
-<p class="business-number-note">위 내용은 성도가 전달한 설명입니다. 이번에 첨부한 공개 자료는 견적서 세 장과 홈택스 조회 화면 두 장입니다. 별도 영수증과 자료 요청·회신 경위는 추가 증빙과 대조가 필요합니다.</p>
+<p class="business-number-note">위 내용은 성도가 전달한 설명입니다. 확인 대상 자료는 견적서 3장과 홈택스 조회 화면 3장입니다. 현재 이 페이지에서 연결된 공개 증빙은 {{ business_number.connected_count }}개입니다. 별도 영수증과 자료 요청·회신 경위는 추가 증빙과 대조가 필요합니다.</p>
 <h3>어디가 틀렸는지, 관련 자료로 설명해 주십시오</h3>
 <ol><li>4층 개조공사 공급자의 정확한 사업자등록번호는 무엇입니까?</li><li>다른 두 견적서와 등록번호가 다른 이유는 무엇입니까?</li><li>단순 기재 오류라면 어느 부분이 잘못되었으며, 이를 확인할 원본과 정정 자료가 있습니까?</li><li>공사 당시 사업자등록증과 실제 발급된 세금계산서·영수증 등 지출 증빙을 제시할 수 있습니까?</li><li>계약 상대방, 증빙 발급자, 대금 수취인의 관계를 확인할 수 있습니까?</li><li>감사 과정에서 공급자 번호와 지출 증빙을 대조했는지 확인할 자료가 있습니까?</li></ol>
 <p>교회 재정 집행을 확인하기 위해 정확한 공급자 정보와 지출 증빙의 공개를 요청합니다. 관련 자료와 설명이 제출되면 확인 결과에 따라 내용을 보완하거나 정정하겠습니다.</p>
+<aside class="business-number-accountability" aria-labelledby="business-number-accountability-title">
+<h3 id="business-number-accountability-title">다른 사람에게 묻는 책임, 자신들의 재정 집행에도 답하십시오</h3>
+<div class="business-number-note"><p><strong>관련 경과와 확인 범위</strong></p>
+<p>장로 측이 목사의 교회법 위반을 주장한 경과는 <a href="/cases/material/T24/">위임목사 고소 관련 사건</a>과 A01 고소장 PDF 7쪽에서 확인했습니다. 고소장 기재는 고소인의 주장으로, 위반이 확정되었다는 뜻은 아닙니다. {% timeline_document 'A01' '7쪽' %}</p>
+<p>견적서는 기존 공개 가림 사본 D01 PDF 40쪽과 대조했습니다. <a href="/cases/material/T53/">4층 공사 관련 경찰 고발장 작성 경과</a>와 노회에 이 견적서를 제출한 경위는 구분합니다. {% timeline_document 'D01' '40쪽' %}</p>
+<p>‘감사를 통과했다’는 설명은 위 성도가 전달한 설명·요지에 근거합니다. 정확한 설명자·문언과 해당 견적서의 노회 제출 여부·제출자·시점은 관련 원문과 추가 대조가 필요합니다. 아래 질문은 지급 승인·집행이나 자료 제출에 실제 관여한 분들에게 확인을 요청하는 것으로, 확인되지 않은 행위를 장로 5명 모두의 행위로 확정하지 않습니다.</p></div>
+<p>목사의 법 위반을 문제 삼는 장로들이라면, <strong>자신들이 관여한 재정 집행에도 같은 수준의 검증과 설명을 받아들여야 합니다.</strong></p>
+<p>4층 공사 견적서에는 다른 두 견적서와 다른 사업자등록번호가 적혀 있습니다. 그 번호는 검증 계산에 맞지 않으며, 제공된 홈택스 조회 화면에서도 미등록으로 표시됩니다. <strong>이 불일치는 ‘감사를 통과했다’는 말만으로 해소되지 않습니다.</strong></p>
+<p>공사비의 지급 승인·집행과 노회 자료 제출에 관여한 분들에게 묻습니다. <strong>공급자 정보와 지급 증빙을 확인했습니까?</strong> 확인했다면 무엇을 확인했으며, 왜 이 번호가 기재된 견적서가 제출되었습니까?</p>
+<p>확인하지 않았다면 재정 집행과 증거자료 검토가 부실했다는 비판에 답해야 합니다. 오류를 알고 있었다면 언제 알았고 어떤 확인·정정 조치를 했는지 밝혀야 합니다.</p>
+<p>성도들의 헌금을 집행한 책임은 다른 사람의 잘못을 지적한다고 사라지지 않습니다. <strong>정확한 지급·정산 증빙과 감사에서 확인한 자료를 제시하십시오.</strong> 오류가 있다면 인정하고 바로잡으십시오. 우리는 이번 거래의 탈세나 고의적 허위 제출을 확정하는 것이 아니라, 드러난 불일치에 대한 구체적인 설명을 요구합니다.</p>
+<p>다른 사람에게 엄격한 기준을 요구하면서 자신들의 집행에는 설명을 생략한다면, 그 기준의 공정성과 지도자로서의 책임 있는 태도를 성도들이 어떻게 신뢰할 수 있겠습니까?</p>
+</aside>
 </div>
 <dialog class="business-number-dialog" id="business-number-dialog" aria-labelledby="business-number-dialog-title"><div class="business-number-dialog-bar"><h3 id="business-number-dialog-title">증빙 이미지 확대</h3><div><button type="button" data-business-evidence-zoom aria-pressed="false">원본 크기로 보기</button> <button type="button" data-business-evidence-close autofocus>닫기</button></div></div><p class="business-number-dialog-caption"></p><div class="business-number-dialog-image" tabindex="0" role="region" aria-label="확대 이미지 이동"></div></dialog>
 </section>
