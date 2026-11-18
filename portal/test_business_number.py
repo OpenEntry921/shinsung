@@ -148,3 +148,39 @@ class BusinessNumberTests(TestCase):
         self.assertIn('#page=40', box)
         for phrase in ('불법인 줄 알면서', '알면서 노회를 속였다', '탈세했다', '횡령했다', '750만원', '750만 원', '업체가 존재하지 않는다', '실체 없는 업체'):
             self.assertNotIn(phrase, box)
+
+    @patch('portal.business_number.asset_url', side_effect=lambda path: '/static/' + path if path.endswith('hometax-5811600460.png') else '')
+    def test_registered_query_ready_does_not_clear_other_missing_states(self, _asset):
+        context = business_number_context()
+        self.assertEqual(context['connected_count'], 1)
+        self.assertEqual(len(context['missing']), 5)
+        html = self.client.get('/').content.decode()
+        card = html.split('id="hometax-5811600460"', 1)[1].split('</figure>', 1)[0]
+        self.assertNotIn('미확보', card)
+        self.assertNotIn('준비 중', card)
+        self.assertNotIn('직접 대조하지 못했습니다', card)
+        self.assertIn('alt="581-16-00460 홈택스 조회 결과. 부가가치세 일반과세자로 표시되며, 2024년 8월 1일 간이과세자에서 일반과세자로 전환되었다는 안내. 조회기준일자 2026년 11월 18일."', card)
+        self.assertIn('출처: 제공된 국세청 홈택스 사업자등록상태 조회 캡처 · 조회기준일자 2026. 11. 18.', card)
+        self.assertIn('이 화면은 해당 번호의 과세유형과 전환 안내를 보여줍니다.', card)
+        self.assertIn('공개용 증빙 이미지 준비 상태', html)
+        self.assertEqual(html.count('공개용 견적서 이미지 준비 중'), 3)
+        self.assertEqual(html.count('해당 홈택스 조회 캡처의 공개용 이미지 준비 중'), 2)
+
+    def test_received_original_query_files_and_dates(self):
+        import hashlib
+        expected = {'hometax-5811600460.png': 'bf47c64db5b241e3d8a4212511e09bfcce522adb7ba143eee93ccd78c3cb29d2', 'hometax-1280318446.png': '4f156b7d5b7bafc1a02b8c04dc80b16d069be6227f6b20df9dd4c81305c76012'}
+        for name, digest in expected.items():
+            path = Path(settings.BASE_DIR) / 'portal/static/portal/business-number' / name
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), digest)
+        context = business_number_context()
+        self.assertEqual(context['connected_count'], 3)
+        self.assertEqual(len(context['missing']), 3)
+        html = self.client.get('/').content.decode()
+        registered = html.split('id="hometax-5811600460"', 1)[1].split('</figure>', 1)[0]
+        self.assertNotIn('미확보', registered)
+        self.assertNotIn('준비 중', registered)
+        original = html.split('id="hometax-1280318446"', 1)[1].split('</figure>', 1)[0]
+        self.assertIn('2026. 11. 18.', original)
+        self.assertIn('2026-11-18', original)
+        self.assertNotIn('2026-11-17', original)
+        self.assertIn('끝자리 변경 가정 번호', html)

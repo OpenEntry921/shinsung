@@ -19,8 +19,12 @@
 <figure id="{{ query.key }}" class="business-number-query">
 <h3>기존 견적서 기재 번호의 홈택스 조회</h3>
 <ul class="business-number-tax-status"><li><span>조회 번호</span><strong>581-16-00460</strong></li><li><span>조회기준일자</span>2026. 11. 18.</li><li><span>화면 표시</span>부가가치세 일반과세자</li><li><span>전환 안내</span>2024년 8월 1일 간이과세자에서 일반과세자로 전환</li></ul>
-{% if query.url %}<a href="{{ query.url }}" data-business-evidence data-evidence-caption="581-16-00460 홈택스 조회, 2026년 11월 18일, 일반과세자 및 2024년 8월 1일 전환 안내" aria-label="581-16-00460 조회 화면 보기"><img src="{{ query.url }}" alt="홈택스 사업자등록상태 조회 581-16-00460, 조회기준일자 2026-11-18, 부가가치세 일반과세자, 2024년 08월 01일 간이과세자에서 일반과세자로 전환 안내" loading="lazy"></a><p><a href="{{ query.url }}" data-business-evidence data-evidence-caption="581-16-00460 홈택스 조회 화면">조회 화면 보기</a></p>{% else %}<p class="business-number-note">581-16-00460 홈택스 조회 캡처 파일 미확보 · 공개용 이미지 준비 중. 위 조회 내용은 사용자 전달 정보로, 실제 화면과 직접 대조하지 못했습니다.</p>{% endif %}
-<figcaption>출처: 제공된 홈택스 사업자등록상태 조회 캡처{% if not query.url %}에 관한 사용자 설명{% endif %}</figcaption>
+{% if query.url %}<a href="{{ query.url }}" data-business-evidence data-evidence-caption="581-16-00460 홈택스 조회, 2026년 11월 18일, 일반과세자 및 2024년 8월 1일 전환 안내" aria-label="581-16-00460 조회 화면 보기"><img src="{{ query.url }}" alt="581-16-00460 홈택스 조회 결과. 부가가치세 일반과세자로 표시되며, 2024년 8월 1일 간이과세자에서 일반과세자로 전환되었다는 안내. 조회기준일자 2026년 11월 18일." loading="lazy"></a><p><a href="{{ query.url }}" data-business-evidence data-evidence-caption="581-16-00460 홈택스 조회 화면">조회 화면 보기</a></p>{% else %}<p class="business-number-note">581-16-00460 홈택스 조회 캡처 파일 미확보 · 공개용 이미지 준비 중. 위 조회 내용은 사용자 전달 정보로, 실제 화면과 직접 대조하지 못했습니다.</p>{% endif %}
+{% if query.url %}
+<p>제공된 2026년 11월 18일자 홈택스 조회 화면에서 581-16-00460은 부가가치세 일반과세자로 표시됩니다. 화면에는 2024년 8월 1일 간이과세자에서 일반과세자로 전환되었다는 안내가 있습니다.</p>
+<figcaption>출처: 제공된 국세청 홈택스 사업자등록상태 조회 캡처 · 조회기준일자 2026. 11. 18.</figcaption>
+<p>이 화면은 해당 번호의 과세유형과 전환 안내를 보여줍니다. 견적서상 상호·대표자명과의 일치 여부 및 개별 공사대금의 신고·납세 여부까지 확인하는 자료는 아닙니다.</p>
+{% else %}<figcaption>출처: 제공된 홈택스 사업자등록상태 조회 캡처에 관한 사용자 설명</figcaption>{% endif %}
 <p>2024년 2월 25일자 견적서의 날짜는 화면에 표시된 일반과세 전환일보다 앞섭니다. 실제 거래 당시 과세유형과 증빙 발급 의무는 공사 완료일·공급시기 등 관련 자료로 확인해야 합니다.</p>
 </figure>
 {% endwith %}
@@ -43,12 +47,12 @@
 <p>이 설명은 제공된 홈택스 캡처에 근거하며, 이 사이트에서 실시간 조회를 수행한 것은 아닙니다.</p>
 {% for query in business_number.queries %}<figure id="{{ query.key }}" class="business-number-query">
 <h4>{{ query.label }}: <strong>{{ query.number }}</strong></h4>
-<p>검증 계산: {{ query.check }}<br>홈택스 화면: <strong>미등록 안내</strong><br>조회기준일자: 2026. 11. 17.</p>
+<p>검증 계산: {{ query.check }}<br>홈택스 화면: <strong>미등록 안내</strong><br>조회기준일자: {{ query.date }}</p>
 {% if query.key == 'hometax-1280318449' %}<p>견적서에 없는 번호이며, 마지막 숫자만 변경해 추가 조회한 번호입니다. 업체가 제시한 정정 번호가 아닙니다.</p>{% endif %}
-{% if query.url %}<a href="{{ query.url }}" data-business-evidence data-evidence-caption="{{ query.label }} {{ query.number }} 홈택스 조회 화면, 2026년 11월 17일" aria-label="{{ query.number }} 홈택스 조회 화면 확대"><img src="{{ query.url }}" alt="사업자등록상태 조회: {{ query.number }}, 국세청에 등록되지 않은 사업자등록번호입니다. 조회기준일자 2026-11-17. 상단에 증빙자료로서 법적인 효력이 없다는 안내가 있음" loading="lazy"></a>{% else %}<p class="business-number-note">해당 홈택스 조회 캡처의 공개용 이미지 준비 중</p>{% endif %}
-<figcaption>출처: 제공된 홈택스 조회 캡처 · {{ query.number }} · 2026-11-17</figcaption>{% if query.url %}<p><a href="{{ query.url }}" data-business-evidence data-evidence-caption="{{ query.label }} {{ query.number }} 홈택스 조회 화면">조회 화면 보기</a></p>{% endif %}</figure>{% endfor %}
+{% if query.url %}<a href="{{ query.url }}" data-business-evidence data-evidence-caption="{{ query.label }} {{ query.number }} 홈택스 조회 화면, {{ query.date }}" aria-label="{{ query.number }} 홈택스 조회 화면 확대"><img src="{{ query.url }}" alt="사업자등록상태 조회: {{ query.number }}, 국세청에 등록되지 않은 사업자등록번호입니다. 조회기준일자 {{ query.iso_date }}." loading="lazy"></a>{% else %}<p class="business-number-note">해당 홈택스 조회 캡처의 공개용 이미지 준비 중</p>{% endif %}
+<figcaption>출처: 제공된 홈택스 조회 캡처 · {{ query.number }} · {{ query.iso_date }}</figcaption>{% if query.url %}<p><a href="{{ query.url }}" data-business-evidence data-evidence-caption="{{ query.label }} {{ query.number }} 홈택스 조회 화면">조회 화면 보기</a></p>{% endif %}</figure>{% endfor %}
 <p>마지막 숫자 6을 9로 바꾸어도 제출된 조회 화면에서는 등록된 번호로 확인되지 않았습니다. 그렇다면 견적서의 어느 부분이 잘못된 것일까요? 정확한 공급자 번호와 작성 경위를 원본 자료로 확인할 필요가 있습니다.</p>
-<p class="business-number-note">위 결과는 2026년 11월 17일자 제출된 조회 화면에 근거합니다. 공사 당시 등록 상태나 고의적인 허위 기재 여부까지 확정하는 자료는 아닙니다. 홈택스는 해당 조회가 증빙자료로서 법적인 효력이 없다고 안내합니다.</p>
+<p class="business-number-note">128-03-18446은 제공된 2026년 11월 18일자 조회 화면에 근거합니다. 끝자리 변경 가정 번호 128-03-18449의 2026년 11월 17일 조회 결과는 사용자 전달 내용이며, 캡처 파일은 아직 연결되지 않았습니다. 공사 당시 등록 상태나 고의적인 허위 기재 여부까지 확정하는 자료는 아닙니다. 홈택스는 해당 조회가 증빙자료로서 법적인 효력이 없다고 안내합니다.</p>
 <p><a href="https://www.hometax.go.kr" target="_blank" rel="noopener noreferrer">홈택스 공식 사이트 (새 탭)</a></p>
 <h3>성도들이 확인하고 싶은 것은 정확한 증빙입니다</h3>
 <p class="business-number-label">성도가 전달한 설명·요지</p>
