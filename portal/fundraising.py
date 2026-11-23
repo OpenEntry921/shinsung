@@ -4,10 +4,10 @@
 # after account_number AND account_holder are confirmed. Blank optional fields
 # are omitted. Preparing/incomplete accounts never reach public HTML.
 FUNDRAISING = {
-    'status': 'preparing',
+    'status': 'published',
     'bank_name': '카카오뱅크',
-    'account_number': '',
-    'account_holder': '',
+    'account_number': '3333-09-0895440',
+    'account_holder': '교회를 사랑하는 모임',
     'manager': '',
     'contact': '',
 }

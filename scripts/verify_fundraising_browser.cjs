@@ -1,24 +1,11 @@
-// Optional Playwright checks. Test publication data stays in a child process;
-// no account settings, repository files or application database are changed.
+// Optional Playwright checks for the published fundraising section.
 const { chromium } = require('playwright');
-const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
-const root = path.resolve(__dirname, '..');
 const base = process.env.FUNDRAISING_BASE_URL || 'http://127.0.0.1:8000';
 const artifacts = process.env.FUNDRAISING_ARTIFACTS || '/tmp/fundraising-artifacts';
 fs.mkdirSync(artifacts, { recursive: true });
-const publicationFixture = execFileSync(path.join(root, '.venv/bin/python'), ['-c', `
-import os,django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE','config.settings')
-django.setup()
-from unittest.mock import patch
-from django.test import Client,override_settings
-from portal.fundraising import FUNDRAISING
-with override_settings(SECURE_SSL_REDIRECT=False), patch.dict(FUNDRAISING, dict(status='published', account_number='TEST-ACCOUNT-NOT-REAL',account_holder='TEST-HOLDER-NOT-REAL')):
-    print(Client().get('/').content.decode())
-`], { cwd: root, env: { ...process.env, APP_MODE: 'development' }, encoding: 'utf8' });
 
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
@@ -26,6 +13,7 @@ with override_settings(SECURE_SSL_REDIRECT=False), patch.dict(FUNDRAISING, dict(
   try {
     for (const width of [1440, 390]) {
       const context = await browser.newContext({ viewport: { width, height: width === 1440 ? 1000 : 844 } });
+      await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: base });
       const page = await context.newPage();
       const errors = [], failures = [], mediaRequests = [];
       page.on('pageerror', e => errors.push(e.message));
@@ -40,9 +28,10 @@ with override_settings(SECURE_SSL_REDIRECT=False), patch.dict(FUNDRAISING, dict(
       await action.scrollIntoViewIfNeeded();
       const box = await action.boundingBox();
       assert.ok(box.y >= 0 && box.y + box.height <= page.viewportSize().height, 'fundraising action must be visible after scrolling');
-      assert.equal(await page.locator('.fundraising-status').count(), 2);
-      for (const status of await page.locator('.fundraising-status').all()) assert.match(await status.innerText(), /카카오뱅크 모임통장 · 계좌 준비 중/);
-      assert.equal(await page.locator('[data-copy-fundraising-account],#fundraising-account-number,.fundraising-account dt').count(), 0);
+      assert.equal(await page.locator('.fundraising-status').count(), 1);
+      assert.match(await page.locator('.fundraising-status').innerText(), /카카오뱅크 모임통장 · 계좌 공개 중/);
+      assert.equal(await page.locator('#fundraising-account-number').innerText(), '3333-09-0895440');
+      assert.equal(await page.getByText('교회를 사랑하는 모임', { exact: true }).count(), 1);
       assert.equal(await page.locator('form,input,a[href^="/prepare"],a[href^="/login"]').count(), 0);
       assert.equal(await page.locator('.timeline-card').count(), 72);
       assert.equal(await page.locator('video').count(), 3);
@@ -57,6 +46,16 @@ with override_settings(SECURE_SSL_REDIRECT=False), patch.dict(FUNDRAISING, dict(
       await page.locator('#fundraising').screenshot({ path: path.join(artifacts, `${width}-detail.png`) });
       await page.goto(base + '/#fundraising');
       assert.equal(await page.locator('#fundraising').isVisible(), true);
+      const account = page.locator('#fundraising-account-number');
+      assert.equal(await account.evaluate(e => {
+        const range = document.createRange();
+        range.selectNodeContents(e);
+        const bounds = range.getBoundingClientRect();
+        return bounds.left >= 0 && bounds.right <= innerWidth && Number(getComputedStyle(e).fontWeight) >= 700;
+      }), true);
+      await page.getByRole('button', { name: '계좌번호 복사' }).click();
+      await page.waitForFunction(() => document.querySelector('.fundraising-copy-result').textContent === '계좌번호가 복사되었습니다');
+      assert.equal(await page.evaluate(() => navigator.clipboard.readText()), '3333090895440');
       for (const hash of ['videos', 'issues', 'dashboard', 'roadmap', 'timeline']) {
         await page.goto(base + '/#' + hash);
         assert.equal(await page.locator('#' + hash).isVisible(), true);
@@ -68,32 +67,21 @@ with override_settings(SECURE_SSL_REDIRECT=False), patch.dict(FUNDRAISING, dict(
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       assert.deepEqual(errors, []); assert.deepEqual(failures, []);
       assert.equal(mediaRequests.length, 0);
-      results.push({ width, scrolledCardAction: 'pass', keyboardAndFragment: 'pass', state: 'preparing, no account fields or copy button', existingLinks: 'pass', overflow: false, consoleErrors: [], initialMediaRequests: 0 });
+      results.push({ width, scrolledCardAction: 'pass', keyboardAndFragment: 'pass', accountAndClipboard: 'pass', existingLinks: 'pass', overflow: false, consoleErrors: [], initialMediaRequests: 0 });
       await context.close();
     }
-    // An intercepted local test page exercises the future published state.
-    // Only the successful case uses the real browser Clipboard API.
-    for (const mode of ['success', 'denied', 'unavailable']) {
+    for (const mode of ['denied', 'unavailable']) {
       const context = await browser.newContext();
-      if (mode === 'success') await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: base });
-      if (mode !== 'success') await context.addInitScript((mode) => {
+      await context.addInitScript((mode) => {
         Object.defineProperty(navigator, 'clipboard', { configurable: true, value: mode === 'unavailable' ? undefined : { writeText: async () => { throw new DOMException('Test permission denial', 'NotAllowedError'); } } });
       }, mode);
       const page = await context.newPage();
-      await page.route('**/__fundraising_test__', r => r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: publicationFixture,
-        headers: { 'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" } }));
-      await page.goto(base + '/__fundraising_test__');
+      await page.goto(base + '/#fundraising');
       await page.getByRole('button', { name: '계좌번호 복사' }).click();
       await page.waitForFunction(() => !document.querySelector('[data-copy-fundraising-account]').disabled);
       const result = await page.locator('.fundraising-copy-result').innerText();
-      if (mode === 'success') {
-        assert.equal(result, '계좌번호를 복사했습니다.');
-        assert.equal(await page.evaluate(() => navigator.clipboard.readText()), 'TEST-ACCOUNT-NOT-REAL');
-      } else {
-        assert.match(result, /복사하지 못했습니다/);
-        assert.doesNotMatch(result, /^계좌번호를 복사했습니다/);
-      }
-      results.push({ publicationFixture: mode, copyResult: 'pass' });
+      assert.match(result, /복사하지 못했습니다/);
+      results.push({ clipboardMode: mode, copyResult: 'pass' });
       await context.close();
     }
     fs.writeFileSync(path.join(artifacts, 'results.json'), JSON.stringify(results, null, 2));

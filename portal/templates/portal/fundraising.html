@@ -15,7 +15,7 @@
 <p><strong>모금 참여 여부가 신앙이나 교회를 사랑하는 마음의 기준이 될 수는 없습니다.</strong> 경제적인 참여가 어려우셔도 부담 갖지 않으셔도 됩니다. 자료를 살펴봐 주시는 일, 잘못된 부분을 짚어 주시는 일, 기도로 함께해 주시는 일도 우리에게 필요합니다.</p>
 
 <h3>맡겨주신 마음에, 투명한 운영으로 답하겠습니다</h3>
-<p>모금은 별도로 마련하는 카카오뱅크 모임통장을 통해 진행할 예정입니다.</p>
+<p>모금은 카카오뱅크 모임통장을 통해 진행합니다.</p>
 <ul>
 <li>모금 목적은 이번 법적 대응에 필요한 비용 마련입니다.</li>
 <li>계좌 관리 담당자와 지출 확인 담당자를 안내하겠습니다.</li>
@@ -23,17 +23,18 @@
 <li>법적 대응과 관계없는 용도로 사용하지 않겠습니다.</li>
 <li>목적을 변경해야 하거나 절차 종료 후 잔액이 남는 경우에는, 처리 방안을 사전에 안내하고 참여자의 의견을 구하겠습니다.</li>
 </ul>
-<p>모금 계좌는 준비되는 대로 이곳에 안내하겠습니다.<br>계좌 공개 시 예금주, 관리 담당자, 문의 방법도 함께 안내하겠습니다.</p>
+<p>문의 방법은 추후 안내하겠습니다.</p>
 
 <h3>서로의 짐을 조금씩 나누어 주십시오</h3>
 <p>우리가 함께 보태는 것은 법적 대응에 필요한 비용이자, 교회의 문제를 외면하지 않고 끝까지 살피겠다는 마음입니다.</p>
 <p>갈등이 오래 이어질수록 지치기 쉽습니다. 그렇기에 서로의 짐을 조금씩 나누고자 합니다.</p>
 <p>사실을 확인하고, 책임을 묻고, 바로잡아야 할 것을 바로잡는 과정에 함께해 주십시오. 우리가 사랑하는 교회가 다시 서로를 믿고 예배하는 공동체로 나아갈 수 있도록, 여러분의 마음을 보태 주십시오.</p>
 </div>
-<div class="fundraising-account" aria-label="모금 계좌 안내">
-{% include 'portal/fundraising_status.html' %}
+<div class="fundraising-account" aria-labelledby="fundraising-account-title">
+<h3 id="fundraising-account-title">교회 회복을 위한 후원 계좌</h3>
 {% if fundraising.account_ready %}
 <dl>
+<dt>은행</dt><dd>{{ fundraising.bank_name }}</dd>
 <dt>계좌번호</dt><dd id="fundraising-account-number">{{ fundraising.account_number }}</dd>
 <dt>예금주</dt><dd>{{ fundraising.account_holder }}</dd>
 {% if fundraising.manager %}<dt>관리 담당자</dt><dd>{{ fundraising.manager }}</dd>{% endif %}
@@ -42,6 +43,8 @@
 <button type="button" data-copy-fundraising-account hidden>계좌번호 복사</button>
 <p class="fundraising-copy-result" role="status" aria-live="polite" aria-atomic="true"></p>
 <noscript><p>표시된 계좌번호를 직접 선택해 복사해 주세요.</p></noscript>
+{% else %}
+{% include 'portal/fundraising_status.html' %}
 {% endif %}
 </div>
 </div>

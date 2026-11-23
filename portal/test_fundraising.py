@@ -2,7 +2,7 @@
 from html.parser import HTMLParser
 from unittest.mock import patch
 from django.test import TestCase, override_settings
-from .fundraising import FUNDRAISING, fundraising_context
+from .fundraising import FUNDRAISING
 
 # The supplied publication copy, retained verbatim and in order.
 BODY = (
@@ -16,13 +16,13 @@ BODY = (
     '각자의 형편과 마음에 따라 십시일반 힘을 보태 주십시오. 참여 금액의 크기로 마음의 무게를 판단하지 않겠습니다. 작은 정성도 이 과정을 이어가는 소중한 힘이 됩니다.',
     '모금 참여 여부가 신앙이나 교회를 사랑하는 마음의 기준이 될 수는 없습니다. 경제적인 참여가 어려우셔도 부담 갖지 않으셔도 됩니다. 자료를 살펴봐 주시는 일, 잘못된 부분을 짚어 주시는 일, 기도로 함께해 주시는 일도 우리에게 필요합니다.',
     '맡겨주신 마음에, 투명한 운영으로 답하겠습니다',
-    '모금은 별도로 마련하는 카카오뱅크 모임통장을 통해 진행할 예정입니다.',
+    '모금은 카카오뱅크 모임통장을 통해 진행합니다.',
     '모금 목적은 이번 법적 대응에 필요한 비용 마련입니다.',
     '계좌 관리 담당자와 지출 확인 담당자를 안내하겠습니다.',
     '모금 총액과 지출 내역을 정기적으로 공유하되, 참여자의 이름과 개별 금액은 동의 없이 공개하지 않겠습니다.',
     '법적 대응과 관계없는 용도로 사용하지 않겠습니다.',
     '목적을 변경해야 하거나 절차 종료 후 잔액이 남는 경우에는, 처리 방안을 사전에 안내하고 참여자의 의견을 구하겠습니다.',
-    '모금 계좌는 준비되는 대로 이곳에 안내하겠습니다. 계좌 공개 시 예금주, 관리 담당자, 문의 방법도 함께 안내하겠습니다.',
+    '문의 방법은 추후 안내하겠습니다.',
     '서로의 짐을 조금씩 나누어 주십시오',
     '우리가 함께 보태는 것은 법적 대응에 필요한 비용이자, 교회의 문제를 외면하지 않고 끝까지 살피겠다는 마음입니다.',
     '갈등이 오래 이어질수록 지치기 쉽습니다. 그렇기에 서로의 짐을 조금씩 나누고자 합니다.',
@@ -74,17 +74,17 @@ class FundraisingTests(TestCase):
         self.assertEqual(html.count('class="timeline-card"'), 72)
         self.assertEqual(html.count('<video '), 3)
 
-    def test_preparing_defaults_publish_only_the_bank_and_state(self):
-        self.assertEqual(FUNDRAISING['bank_name'], '카카오뱅크')
-        self.assertEqual(FUNDRAISING['status'], 'preparing')
-        for key in ('account_number', 'account_holder', 'manager', 'contact'):
-            self.assertEqual(FUNDRAISING[key], '')
+    def test_confirmed_account_is_public_only_in_the_fundraising_section(self):
         response = self.client.get('/')
-        self.assertContains(response, '카카오뱅크 모임통장 · 계좌 준비 중', count=2)
-        self.assertNotContains(response, '계좌번호 복사')
-        self.assertNotContains(response, 'id="fundraising-account-number"')
-        self.assertNotContains(response, '<dt>')
-        self.assertEqual(fundraising_context(), {'bank_name': '카카오뱅크', 'account_ready': False})
+        self.assertContains(response, '카카오뱅크 모임통장 · 계좌 공개 중', count=1)
+        self.assertContains(response, '계좌번호 복사', count=1)
+        self.assertNotContains(response, '계좌 준비 중')
+        page = response.content.decode()
+        section = page.split('id="fundraising"', 1)[1].split('</section>', 1)[0]
+        for value in ('3333-09-0895440', '교회를 사랑하는 모임'):
+            self.assertContains(response, value, count=1)
+            self.assertIn(value, section)
+            self.assertNotContains(self.client.get('/cases/material/T53/'), value)
 
     def test_incomplete_or_unpublished_accounts_never_reach_html(self):
         test_account = dict(status='published', account_number='TEST-ACCOUNT-NOT-REAL',
@@ -102,7 +102,7 @@ class FundraisingTests(TestCase):
         with patch.dict(FUNDRAISING, dict(status='published', account_number=' TEST-ACCOUNT-NOT-REAL ',
                                         account_holder='TEST-HOLDER-NOT-REAL')):
             response = self.client.get('/')
-        self.assertContains(response, '카카오뱅크 모임통장 · 계좌 공개 중', count=2)
+        self.assertContains(response, '카카오뱅크 모임통장 · 계좌 공개 중', count=1)
         self.assertContains(response, '<dd id="fundraising-account-number">TEST-ACCOUNT-NOT-REAL</dd>', html=True)
         self.assertContains(response, '<dt>예금주</dt>', html=True)
         self.assertContains(response, '계좌번호 복사')
