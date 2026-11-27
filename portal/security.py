@@ -26,8 +26,9 @@ def send_sms(member, code):
     signature=hmac.new(settings.SMS_API_SECRET.encode(),(date+salt).encode(),hashlib.sha256).hexdigest()
     try:
         r=requests.post('https://api.solapi.com/messages/v4/send',headers={'Authorization':f'HMAC-SHA256 apiKey={settings.SMS_API_KEY}, date={date}, salt={salt}, signature={signature}'},json={'message':{'to':member.phone,'from':settings.SMS_SENDER,'text':f'[교인 전용 안내] 인증번호 {code} (5분 이내). 타인에게 전달하지 마세요.'}},timeout=10)
-        return r.status_code in (200,201)
-    except requests.RequestException: return False
+        return r.status_code in (200, 201) and str(r.json().get('statusCode')) == '2000'
+    except (requests.RequestException, ValueError, AttributeError):
+        return False
 
 def valid_totp(code, username):
     secret=settings.ADMIN_MFA_SECRETS.get(username,'')

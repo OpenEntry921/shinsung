@@ -82,6 +82,12 @@ class AccessMiddleware:
             request.member = None
         path=request.path
         public=public_read(request) or path in ('/login/','/otp/','/exception/','/apply/','/logout/') or (request.method in ('GET','HEAD') and path.startswith('/static/'))
+        if request.path_info in ('/board/auth/', '/board/verify/'):
+            return self.get_response(request)
+        if request.path_info.startswith('/posts/') and not request.member and not request.user.is_staff:
+            from .board_auth import board_member
+            request.member = board_member(request)
+            request.board_only = request.member is not None
         admin_public=path in ('/admin/login/','/admin/logout/','/admin-mfa/')
         if path.startswith('/admin') or path.startswith('/roster/') or path.startswith('/exception-issue/') or path.startswith('/materials/'):
             if not admin_public:
