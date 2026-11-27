@@ -5,6 +5,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 APP_MODE = os.environ.get('APP_MODE', 'production')
 DEV = APP_MODE == 'development'
 DEMO_LOGIN_ENABLED = os.environ.get('DEMO_LOGIN_ENABLED', 'false') == 'true'
+SHOW_BUSINESS_NUMBER_CARD = os.environ.get('SHOW_BUSINESS_NUMBER_CARD', 'false') == 'true'
 PRIVATE_STORAGE_CONFIRMED = os.environ.get('PRIVATE_STORAGE_CONFIRMED','')=='true'
 REAL_MATERIALS_ENABLED = os.environ.get('REAL_MATERIALS_ENABLED','')=='true'
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')

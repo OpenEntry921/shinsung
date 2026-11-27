@@ -51,6 +51,19 @@ class LandingTests(TestCase):
         self.assertContains(response, '기존 정리 E01~E30 보기')
         self.assertEqual(self.client.head('/').status_code, 200)
 
+    @override_settings(SHOW_BUSINESS_NUMBER_CARD=False)
+    def test_registration_chart_replaces_default_business_number_card(self):
+        response = self.client.get('/')
+        self.assertNotContains(response, 'id="business-number-card-title"')
+        self.assertNotContains(response, 'href="#business-number-check"')
+        self.assertContains(response, 'id="business-number-check"')
+        self.assertContains(response, '2020년 이후 새가족 등록 현황')
+        self.assertContains(response, 'datetime="2026-11-26"')
+        self.assertEqual(
+            [(row['year'], row['count']) for row in response.context['annual_registrations']],
+            [(2020, 3), (2021, 2), (2022, 2), (2023, 24), (2024, 82), (2025, 62), (2026, 46)],
+        )
+
     def test_local_media_presence_and_missing_poster_do_not_break_home(self):
         with TemporaryDirectory() as directory, self.settings(
             STATICFILES_DIRS=[directory],
@@ -73,13 +86,13 @@ class LandingTests(TestCase):
             video_grid = html.split('<div class="video-grid">', 1)[1].split('<section class="landing-section"', 1)[0]
             self.assertNotIn('<img ', video_grid)
             (folder / first['poster']).write_bytes(b'synthetic-poster-placeholder')
-            self.assertContains(self.client.get('/'), 'poster="/static/portal/videos/questions.jpg"')
+            self.assertContains(self.client.get('/'), 'poster="/static/portal/videos/authority-and-responsibility.jpg"')
             (folder / first['filename']).unlink()
             html = self.client.get('/').content.decode()
             self.assertNotIn('<video ', html)
             self.assertIn('영상 준비 중', html)
             # A poster alone does not turn a missing film into a broken player.
-            self.assertIn('alt="교회에 묻는 다섯 가지 질문 영상 표지"', html)
+            self.assertIn('alt="권한에 책임이 뒤따릅니다 영상 표지"', html)
 
     def test_uncollected_manifest_entry_falls_back_to_pending(self):
         from unittest.mock import patch
@@ -123,7 +136,7 @@ class LandingTests(TestCase):
             self.assertTrue(record['is_default'])
             self.assertLessEqual(record['basis_on'], date(2026, 11, 4))
         # Linking real media must preserve the existing related-record mapping.
-        self.assertEqual([e['key'] for e in response.context['home_videos'][1]['related']], ['T05', 'T18', 'T63'])
+        self.assertEqual([e['key'] for e in response.context['home_videos'][2]['related']], ['T05', 'T18', 'T63'])
         for group in [*response.context['home_videos'], *response.context['home_issues']]:
             for entry in group['related']:
                 target = self.client.get(f'/cases/material/{entry["key"]}/')
@@ -133,9 +146,12 @@ class LandingTests(TestCase):
 
     def test_three_real_videos_preserve_uploads_and_activate_the_right_cards(self):
         expected = (
-            ('questions', 'church-questions.mp4', '224ca547aea7f2864537bdb138adefd90fdfb97db685c66ad770144fa6e5a5bd'),
-            ('offering', 'offering-and-restoration.mp4', '420daf613a1b7da8fad15e891272eb2e30cbedc744d301cbce29d4b3ad3c92b7'),
-            ('example', 'prayer-and-service.mp4', 'adf192fd07afc78554db4bdef9b9f62dac0bac70309f479e81ed0e61d97914c2'),
+            ('questions', 'authority-and-responsibility.mp4', '권한에 책임이 뒤따릅니다',
+             'd68992e2ac642092dee5deca8a167fc41f9509f523a678d8d1a24afc72cc2ae1'),
+            ('example', 'daily-participation.mp4', '누가 매일 나오랍니까?',
+             'dc670f192f40e0c3d6a45af3ef1de542b1b54ece7de10bde7644ae5c19d058b6'),
+            ('offering', 'purpose-of-offerings.mp4', '본질을 훼손 마세요',
+             '4f4a5b2d377e129ee05d8cd009c97b0d60db2cc846dbab6c643d2fa952c450ae'),
         )
         response = self.client.get('/')
         self.assertContains(response, '<video ', count=3)
@@ -143,9 +159,9 @@ class LandingTests(TestCase):
         self.assertContains(response, 'controls playsinline preload="none"', count=3)
         self.assertNotContains(response, ' autoplay')
         videos = response.context['home_videos']
-        for item, (key, filename, digest) in zip(videos, expected):
+        for item, (key, filename, title, digest) in zip(videos, expected):
             with self.subTest(key=key):
-                self.assertEqual((item['key'], item['filename']), (key, filename))
+                self.assertEqual((item['key'], item['filename'], item['title']), (key, filename, title))
                 binary = settings.BASE_DIR / 'portal/static/portal/videos' / filename
                 self.assertEqual(hashlib.sha256(binary.read_bytes()).hexdigest(), digest)
                 self.assertTrue(item['url'].startswith('/static/portal/videos/'))
@@ -167,6 +183,6 @@ class LandingTests(TestCase):
             STATIC_ROOT=directory,
         ):
             folder = Path(directory) / 'portal/videos'; folder.mkdir(parents=True)
-            (folder / 'church-questions.mp4').write_bytes(b'synthetic-collected-asset')
-            self.assertEqual(asset_url('portal/videos/church-questions.mp4'), '/static/portal/videos/church-questions.mp4')
+            (folder / 'authority-and-responsibility.mp4').write_bytes(b'synthetic-collected-asset')
+            self.assertEqual(asset_url('portal/videos/authority-and-responsibility.mp4'), '/static/portal/videos/authority-and-responsibility.mp4')
             self.assertEqual(asset_url('portal/videos/missing.mp4'), '')

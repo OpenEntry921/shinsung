@@ -1,23 +1,28 @@
 """Public landing metadata only; never loads member or preparation records."""
+from django.conf import settings
 from django.contrib.staticfiles import finders
 from django.contrib.staticfiles.storage import staticfiles_storage
 from .reading_registry import legacy_reading_entries
 
 # Stable keys, not display numbers (the revised timeline intentionally differs).
 VIDEOS = (
-    dict(key='questions', title='교회에 묻는 다섯 가지 질문',
-         description='고소 이후의 회복, 헌신, 참여와 교회 운영에 관한 질문입니다.',
-         filename='church-questions.mp4',
-         poster='questions.jpg', related=('T24', 'T33', 'T32')),
-    dict(key='offering', title='목적헌금의 본질을 훼손하지 마십시오',
-         description='목적헌금의 실제 지출과 원심 판단, 복직 요청과 바로잡는 책임을 살펴봅니다.',
-         filename='offering-and-restoration.mp4',
-         poster='offering.jpg', related=('T05', 'T18', 'T63')),
-    dict(key='example', title='누가 매일 나오시라고 합니까?',
-         description='베드로전서의 권면과 예배·사역에 참여하는 지도자의 본을 묻습니다.',
-         filename='prayer-and-service.mp4',
-         poster='example.jpg', related=('T02', 'T47')),
+    dict(key='questions', title='권한에 책임이 뒤따릅니다',
+         description='교회 운영에서 권한과 설명 책임을 묻습니다.',
+         filename='authority-and-responsibility.mp4',
+         poster='authority-and-responsibility.jpg', related=('T24', 'T33', 'T32')),
+    dict(key='example', title='누가 매일 나오랍니까?',
+         description='예배와 사역에 참여하는 지도자의 역할을 묻습니다.',
+         filename='daily-participation.mp4',
+         poster='daily-participation.jpg', related=('T02', 'T47')),
+    dict(key='offering', title='본질을 훼손 마세요',
+         description='목적헌금의 취지와 사용에 관한 기록을 살펴봅니다.',
+         filename='purpose-of-offerings.mp4',
+         poster='purpose-of-offerings.jpg', related=('T05', 'T18', 'T63')),
 )
+
+# Published aggregates only. Known registration dates take precedence over report years.
+ANNUAL_REGISTRATIONS = ((2020, 3), (2021, 2), (2022, 2), (2023, 24),
+                        (2024, 82), (2025, 62), (2026, 46))
 ISSUES = (
     ('목사 고소와 교회의 회복', '판결과 상고의 쟁점, 공동체 회복의 책임', ('T24', 'T62', 'T63', 'T64')),
     ('목적헌금과 회계 처리', '실제 사용 내역과 원심 판단', ('T04', 'T05', 'T18', 'T63')),
@@ -55,4 +60,11 @@ def landing_context(entries, groups):
                        key=lambda r: (r['updated_at'], r['id']), reverse=True)
     defaults = next(items for label, items in groups if label == '최근 업데이트')
     recent = (published + [r for r in defaults if r['is_default']])[:3]
-    return dict(home_videos=videos, home_issues=issues, recent_records=recent)
+    maximum = max(count for _, count in ANNUAL_REGISTRATIONS if count is not None)
+    registrations = [
+        dict(year=year, count=count, width=round(100 * count / maximum) if count is not None else 0)
+        for year, count in ANNUAL_REGISTRATIONS
+    ]
+    return dict(home_videos=videos, home_issues=issues, recent_records=recent,
+                show_business_number_card=settings.SHOW_BUSINESS_NUMBER_CARD,
+                annual_registrations=registrations)

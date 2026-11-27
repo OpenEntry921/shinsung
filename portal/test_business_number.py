@@ -27,6 +27,7 @@ class ComparisonRows(HTMLParser):
 
 @override_settings(SECURE_SSL_REDIRECT=False)
 class BusinessNumberTests(TestCase):
+    @override_settings(SHOW_BUSINESS_NUMBER_CARD=True)
     def test_public_placement_and_existing_content(self):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)

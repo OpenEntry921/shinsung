@@ -9,7 +9,8 @@
 <p class="section-label">기록에서 시작하는 회복</p>
 <h1 id="hero-title">권한만큼,<br><span>책임도 묻습니다.</span></h1>
 <p class="hero-description">신성커뮤니티교회의 결정과 그 과정을 기록으로 살펴봅니다.<br> 우리가 지키려는 것은 교회의 회복입니다.</p>
-{% include 'portal/business_number_card.html' %}
+{% if show_business_number_card %}{% include 'portal/business_number_card.html' %}{% endif %}
+{% include 'portal/home_registrations.html' %}
 {% include 'portal/fundraising_card.html' %}
 <div class="hero-actions"><a class="button" href="#videos">핵심 내용 보기 <span aria-hidden="true">↓</span></a><a class="button secondary" href="#timeline">사건 기록 살펴보기 <span aria-hidden="true">↗</span></a></div>
 {% include 'portal/home_scripture.html' %}
@@ -20,12 +21,12 @@
 <article class="video-card" aria-labelledby="video-title-{{ video.key }}">
 {% if video.url %}
 <details class="video-player" data-video-player>
-<summary aria-controls="player-{{ video.key }}"><span class="video-cover">{% if video.poster_url %}<img src="{{ video.poster_url }}" alt="{{ video.title }} 영상 표지" loading="lazy" width="1080" height="1920">{% else %}<span class="cover-title">{{ video.title }}</span>{% endif %}<span class="play-label"><span aria-hidden="true">▶</span> 영상 재생</span></span><span class="close-label">영상 접기</span></summary>
+<summary aria-controls="player-{{ video.key }}"><span class="video-cover">{% if video.poster_url %}<img src="{{ video.poster_url }}" alt="{{ video.title }} 영상 표지" loading="lazy" width="406" height="720">{% else %}<span class="cover-title">{{ video.title }}</span>{% endif %}<span class="play-label"><span aria-hidden="true">▶</span> 영상 재생</span></span><span class="close-label">영상 접기</span></summary>
 <video id="player-{{ video.key }}" controls playsinline preload="none"{% if video.poster_url %} poster="{{ video.poster_url }}"{% endif %} aria-label="{{ video.title }}"><source src="{{ video.url }}" type="video/mp4">이 브라우저는 영상을 지원하지 않습니다.</video>
 <p class="video-error" role="status" hidden>영상을 불러오지 못했습니다. 아래 관련 기록을 먼저 살펴보세요.</p>
 </details>
 {% else %}
-<div class="video-cover pending">{% if video.poster_url %}<img src="{{ video.poster_url }}" alt="{{ video.title }} 영상 표지" loading="lazy" width="1080" height="1920">{% else %}<span class="cover-title">{{ video.title }}</span>{% endif %}<span class="pending-label">영상 준비 중</span></div>
+<div class="video-cover pending">{% if video.poster_url %}<img src="{{ video.poster_url }}" alt="{{ video.title }} 영상 표지" loading="lazy" width="406" height="720">{% else %}<span class="cover-title">{{ video.title }}</span>{% endif %}<span class="pending-label">영상 준비 중</span></div>
 {% endif %}
 <div class="video-copy"><p class="video-number">영상 {{ forloop.counter|stringformat:'02d' }}</p><h3 id="video-title-{{ video.key }}">{{ video.title }}</h3><p>{{ video.description }}</p>
 <details class="related-records"><summary>관련 사건·근거 보기</summary><ul>{% for entry in video.related %}<li><a href="{% url 'fixed_case' entry.key %}">{{ entry.title }}</a></li>{% endfor %}</ul></details></div>
