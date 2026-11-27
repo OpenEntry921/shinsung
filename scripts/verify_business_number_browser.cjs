@@ -109,7 +109,11 @@ fs.mkdirSync(artifacts, { recursive: true });
     const nojs = await browser.newContext({ javaScriptEnabled:false, viewport:{width:390,height:844} });
     const page = await nojs.newPage();
     await page.goto(base + '/');
-    await page.getByRole('link', { name: '견적서와 조회 결과 확인하기', exact: true }).click();
+    if (showCard) {
+      await page.getByRole('link', { name: '견적서와 조회 결과 확인하기', exact: true }).click();
+    } else {
+      await page.goto(base + '/#business-number-check');
+    }
     assert.equal(new URL(page.url()).hash, '#business-number-check');
     const href = await page.locator('[data-business-evidence]').first().getAttribute('href');
     await page.locator('[data-business-evidence]').first().click();
