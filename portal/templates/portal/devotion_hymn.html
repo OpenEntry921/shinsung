@@ -1,9 +1,38 @@
 {% extends 'portal/devotion_resource.html' %}
 {% load static %}
+{% block body_class %}devotion-hymn{% endblock %}
+{% block extra_head %}
+<style>
+  .devotion-hymn {
+    display: grid;
+    grid-template-rows: auto minmax(min-content, 1fr) auto;
+    height: 100vh;
+    height: 100dvh;
+  }
+  .devotion-hymn header { padding-block: .3rem; }
+  .devotion-hymn header nav { margin-top: 0; gap: .25rem 1rem; font-size: .9rem; }
+  .devotion-hymn footer { margin-block: 0; padding-block: .25rem; font-size: .75rem; line-height: 1.3; }
+  .devotion-hymn footer p { margin: 0; }
+  .devotion-hymn main { display: grid; width: 100%; margin-block: 0; }
+  .devotion-hymn .panel {
+    display: grid;
+    grid-template-rows: auto auto minmax(3rem, 1fr) auto;
+    gap: .3rem;
+    margin: .25rem 0;
+    padding: .4rem;
+    text-align: center;
+  }
+  .devotion-hymn .panel > p, .devotion-hymn h1 { margin: 0; }
+  .devotion-hymn h1 { font-size: clamp(1.1rem, 3vw, 1.5rem); }
+  .devotion-score { position: relative; min-width: 0; }
+  .devotion-image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; }
+  .devotion-return .button { padding-block: .4rem; }
+</style>
+{% endblock %}
 {% block resource_title %}찬송가 310장 「아 하나님의 은혜로」{% endblock %}
 {% block resource %}
 {% static 'portal/devotion/hymn-310.png' as score_url %}
-<a href="{{ score_url }}" target="_blank" rel="noopener noreferrer" aria-label="새찬송가 310장 악보 크게 보기 (새 탭)">
+<a class="devotion-score" href="{{ score_url }}" target="_blank" rel="noopener noreferrer" aria-label="새찬송가 310장 악보 크게 보기 (새 탭)">
   <img class="devotion-image" src="{{ score_url }}" width="1426" height="2110" alt="새찬송가 310장 「아 하나님의 은혜로」 악보">
 </a>
 {% endblock %}
