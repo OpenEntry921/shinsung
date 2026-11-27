@@ -1,5 +1,9 @@
 {% extends 'portal/devotion_resource.html' %}
+{% load static %}
 {% block resource_title %}찬송가 310장 「아 하나님의 은혜로」{% endblock %}
 {% block resource %}
-<p><a href="https://search.naver.com/search.naver?query=새찬송가+310장+아+하나님의+은혜로+악보" target="_blank" rel="noopener noreferrer">새찬송가 310장 악보 찾기 (새 탭)</a></p>
+{% static 'portal/devotion/hymn-310.png' as score_url %}
+<a href="{{ score_url }}" target="_blank" rel="noopener noreferrer" aria-label="새찬송가 310장 악보 크게 보기 (새 탭)">
+  <img class="devotion-image" src="{{ score_url }}" width="1426" height="2110" alt="새찬송가 310장 「아 하나님의 은혜로」 악보">
+</a>
 {% endblock %}
