@@ -2,20 +2,23 @@
   <h2 id="registration-title">2020년 이후 새가족 등록 현황</h2>
   <p class="registration-headline">{{ registration_highlight_start }}년 이후 새가족 <strong>{{ registration_highlight_total }}명</strong> 등록</p>
   <p class="registration-period">{{ registration_highlight_start }}년~<time datetime="{{ registration_cutoff|date:'Y-m-d' }}">{{ registration_cutoff|date:'Y년 n월 j일' }}</time></p>
-  <p class="registration-intro">코로나19 유행기인 2020년, 송재용 목사가 부임했습니다. 일상이 회복되는 시기인 2023년부터 새가족 등록이 이전보다 크게 늘었습니다. 송 목사와 교역자들이 새가족을 맞이하며 이어 온 사역을 등록 흐름과 함께 살펴봅니다.</p>
-  <dl class="registration-bars">
-    {% for registration in annual_registrations %}
-    <div class="registration-row{% if registration.year >= registration_highlight_start %} registration-row-highlight{% endif %}">
-      <dt>{{ registration.year }}년</dt>
-      <dd>
-        {% if registration.count is not None %}
-        <span class="registration-track" aria-hidden="true"><span style="width: {{ registration.width }}%"></span></span>
-        <span class="registration-value">{{ registration.count }}명{% if registration.year == registration_cutoff.year %}<small>{{ registration_cutoff|date:'n월 j일' }} 기준</small>{% endif %}</span>
-        {% else %}
-        <span></span><span class="registration-value">자료 없음</span>
-        {% endif %}
-      </dd>
-    </div>
-    {% endfor %}
-  </dl>
+  <details class="registration-details">
+    <summary>연도별 등록 현황 보기</summary>
+    <dl class="registration-bars">
+      {% for registration in annual_registrations %}
+      <div class="registration-row{% if registration.year >= registration_highlight_start %} registration-row-highlight{% endif %}">
+        <dt>{{ registration.year }}년</dt>
+        <dd>
+          {% if registration.count is not None %}
+          <span class="registration-track" aria-hidden="true"><span style="width: {{ registration.width }}%"></span></span>
+          <span class="registration-value">{{ registration.count }}명{% if registration.year == registration_cutoff.year %}<small>{{ registration_cutoff|date:'n월 j일' }} 기준</small>{% endif %}</span>
+          {% else %}
+          <span></span><span class="registration-value">자료 없음</span>
+          {% endif %}
+        </dd>
+      </div>
+      {% endfor %}
+    </dl>
+  </details>
+  <p class="registration-participation">함께 확인하고 싶은 질문이나 나누고 싶은 자료가 있다면 모임 진행자에게 말씀해 주세요.</p>
 </section>

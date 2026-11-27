@@ -3,18 +3,23 @@
 <p class="section-label">교회 회복을 위한 자발적 모금 안내</p>
 <h2 id="fundraising-title">우리가 사랑하는 교회, 함께 책임지고 지켜가겠습니다</h2>
 <p class="fundraising-independent">교회 공식 모금이 아닌, 취지에 공감하는 성도들의 자발적 모금입니다.</p>
+<nav class="fundraising-links" aria-label="모금 상세 바로가기">
+<a href="#fundraising-purpose">모금 목적</a>
+<a href="#fundraising-management">관리·보고 방식</a>
+<a href="#fundraising-account-title">후원 계좌</a>
+</nav>
 <div class="fundraising-body">
 <p>우리가 바라는 것은 누군가의 승리로 끝나는 교회가 아닙니다.</p>
 <p>성도들이 안심하고 예배드리고, 서로의 안부를 묻고, 다음 세대에게 기쁜 마음으로 물려줄 수 있는 교회입니다. 질문하는 목소리가 존중받고, 공동체의 중요한 결정에 충분한 설명과 책임이 따르는 교회입니다.</p>
 <p>지금의 갈등을 바라보며 많은 성도님께서 마음 아파하셨을 것입니다. 드러내어 말하지 못했어도, 교회를 걱정하며 기도해 오신 마음이 있다는 것을 알고 있습니다.</p>
 <p>기도하며 기다리는 마음과 함께, 사실을 확인하고 책임을 분명히 묻는 행동도 필요하다고 생각합니다.</p>
 <p>우리는 그동안의 자료와 경과를 바탕으로, 사회법을 통한 판단을 구하고자 합니다. 서로 다른 주장 속에서 무엇이 사실인지, 어떤 절차와 책임을 바로 세워야 하는지 확인하기 위한 과정입니다. 우리 역시 확인된 사실에 근거해 주장하고, 그 판단을 성실하게 마주하겠습니다.</p>
-<p>이 과정에는 변호사 상담과 선임, 소송 진행, 증거자료 정리 등에 비용이 필요합니다. 몇 사람의 부담만으로는 감당하기 어려운 현실적인 문제입니다.</p>
+<p id="fundraising-purpose">이 과정에는 변호사 상담과 선임, 소송 진행, 증거자료 정리 등에 비용이 필요합니다. 몇 사람의 부담만으로는 감당하기 어려운 현실적인 문제입니다.</p>
 <p><strong>이 비용은 교회 헌금이나 교회 재정으로 충당하지 않겠습니다.</strong> 취지에 공감하는 성도님들의 자발적인 참여로 마련하고자 합니다.</p>
 <p>각자의 형편과 마음에 따라 십시일반 힘을 보태 주십시오. 참여 금액의 크기로 마음의 무게를 판단하지 않겠습니다. 작은 정성도 이 과정을 이어가는 소중한 힘이 됩니다.</p>
 <p><strong>모금 참여 여부가 신앙이나 교회를 사랑하는 마음의 기준이 될 수는 없습니다.</strong> 경제적인 참여가 어려우셔도 부담 갖지 않으셔도 됩니다. 자료를 살펴봐 주시는 일, 잘못된 부분을 짚어 주시는 일, 기도로 함께해 주시는 일도 우리에게 필요합니다.</p>
 
-<h3>맡겨주신 마음에, 투명한 운영으로 답하겠습니다</h3>
+<h3 id="fundraising-management">맡겨주신 마음에, 투명한 운영으로 답하겠습니다</h3>
 <p>모금은 카카오뱅크 모임통장을 통해 진행합니다.</p>
 <ul>
 <li>모금 목적은 이번 법적 대응에 필요한 비용 마련입니다.</li>
@@ -32,6 +37,7 @@
 </div>
 <div class="fundraising-account" aria-labelledby="fundraising-account-title">
 <h3 id="fundraising-account-title">교회 회복을 위한 후원 계좌</h3>
+{% include 'portal/fundraising_status.html' %}
 {% if fundraising.account_ready %}
 <dl>
 <dt>은행</dt><dd>{{ fundraising.bank_name }}</dd>
@@ -43,8 +49,6 @@
 <button type="button" data-copy-fundraising-account hidden>계좌번호 복사</button>
 <p class="fundraising-copy-result" role="status" aria-live="polite" aria-atomic="true"></p>
 <noscript><p>표시된 계좌번호를 직접 선택해 복사해 주세요.</p></noscript>
-{% else %}
-{% include 'portal/fundraising_status.html' %}
 {% endif %}
 </div>
 </div>

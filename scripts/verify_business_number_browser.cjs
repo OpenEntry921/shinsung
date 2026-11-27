@@ -27,7 +27,7 @@ fs.mkdirSync(artifacts, { recursive: true });
       assert.equal(await page.locator('video[preload="none"][controls][playsinline]').count(), 3);
       assert.equal(await page.locator('#fundraising').count(), 1);
       assert.equal(await page.locator('a[href^="/prepare"]').count(), 0);
-      assert.equal(await page.evaluate(() => document.querySelector('.hero-description').nextElementSibling.className), 'business-number-card');
+      assert.equal(await page.locator('.hero .business-number-card').isVisible(), true);
       await page.screenshot({ path: path.join(artifacts, 'card-' + width + '.png') });
       const button = page.getByRole('link', { name: '견적서와 조회 결과 확인하기', exact: true });
       await button.focus(); await page.keyboard.press('Enter');

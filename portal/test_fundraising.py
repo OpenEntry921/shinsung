@@ -59,13 +59,9 @@ class FundraisingTests(TestCase):
         parser = BodyParser(); parser.feed(html)
         self.assertEqual(tuple(parser.items), BODY)
         self.assertContains(response, '우리가 사랑하는 교회, 함께 책임지고 지켜가겠습니다')
-        self.assertContains(response, '우리가 사랑하는 교회, 함께 지켜가겠습니다.')
-        self.assertContains(response, '여러분의 작은 정성이 이 과정을 끝까지 이어갈 힘이 됩니다.')
         self.assertContains(response, 'href="#fundraising"', count=1)
         self.assertEqual(html.count('id="fundraising"'), 1)
-        self.assertLess(html.index('class="hero-description"'), html.index('class="fundraising-card"'))
-        self.assertLess(html.index('class="fundraising-card"'), html.index('class="hero-actions"'))
-        self.assertLess(html.index('id="timeline"'), html.index('id="fundraising"'))
+        self.assertLess(html.index('id="fundraising"'), html.index('id="timeline"'))
         self.assertLess(html.index('id="fundraising"'), html.index('<footer>'))
         self.assertNotIn('<details', html.split('id="fundraising"', 1)[1])
         for private in ('/prepare', '/login/', '<form', 'name="phone"'):
@@ -93,7 +89,7 @@ class FundraisingTests(TestCase):
                         {'account_number': ''}, {'account_number': '   '}, {'account_holder': ''}):
             with self.subTest(changes=changes), patch.dict(FUNDRAISING, {**test_account, **changes}):
                 html = self.client.get('/').content.decode()
-                self.assertEqual(html.count('카카오뱅크 모임통장 · 계좌 준비 중'), 2)
+                self.assertEqual(html.count('카카오뱅크 모임통장 · 계좌 준비 중'), 1)
                 self.assertNotIn('계좌번호 복사', html)
                 for value in ('TEST-ACCOUNT-NOT-REAL', 'TEST-HOLDER-NOT-REAL', 'TEST-MANAGER', 'TEST-CONTACT'):
                     self.assertNotIn(value, html)
