@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path
+from django.views.generic import TemplateView
 from portal import views as v
 from portal.business_number import evidence as business_number_evidence
 from portal import discussions as d
@@ -7,6 +8,8 @@ from portal import material_views as m
 from portal import preparation as p
 from portal import appeals as a
 urlpatterns=[
+ path('devotion/hymn-310/', TemplateView.as_view(template_name='portal/devotion_hymn.html'), name='devotion_hymn'),
+ path('devotion/acts-17-30-31/', TemplateView.as_view(template_name='portal/devotion_acts.html'), name='devotion_acts'),
  path('business-number-evidence/<str:filename>/', business_number_evidence, name='business_number_evidence'),
  path('prepare',p.prepare_redirect),path('prepare/',p.index,name='prepare'),
  path('prepare/events/',p.events,name='prepare_events'),
