@@ -1,0 +1,21 @@
+<section class="registration-chart" aria-labelledby="registration-title">
+  <h2 id="registration-title">2020년 이후 새가족 등록 현황</h2>
+  <p>2020년부터 <time datetime="2026-11-26">2026년 11월 26일</time>까지 자료에서 확인된 신규 등록 인원입니다.</p>
+  <dl class="registration-bars">
+    {% for registration in annual_registrations %}
+    <div class="registration-row">
+      <dt>{{ registration.year }}년</dt>
+      <dd>
+        {% if registration.count is not None %}
+        <span class="registration-track" aria-hidden="true"><span style="width: {{ registration.width }}%"></span></span>
+        <span>{{ registration.count }}명</span>
+        {% else %}
+        <span></span><span>자료 없음</span>
+        {% endif %}
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+  <p class="registration-note">등록일이 있는 경우 해당 연도로 집계했습니다. 2020·2021년은 자료에 개별 등록일이 없어 문서의 연도를 적용했습니다. 2026년은 11월 26일 기준 부분 집계입니다.</p>
+  <p class="registration-note"><a href="{% url 'fixed_case' 'T01' %}">공개 사건 기록</a>에는 위임목사의 2020년 부임 경과가 나옵니다. 세부 날짜는 자료마다 다르게 기재되어 있습니다.</p>
+</section>
