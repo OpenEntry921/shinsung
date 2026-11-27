@@ -46,6 +46,7 @@ class Challenge(models.Model):
     attempts = models.PositiveIntegerField(default=0)
     used = models.BooleanField(default=False)
     exception = models.BooleanField(default=False)
+    board_browser = models.CharField(max_length=64, null=True, unique=True, editable=False)
 
 class RateBucket(models.Model):
     key = models.CharField(max_length=64,unique=True)

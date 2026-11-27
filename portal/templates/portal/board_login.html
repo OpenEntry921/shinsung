@@ -1,0 +1,18 @@
+{% extends 'portal/base.html' %}
+{% block title %}교인 질문 게시판 인증{% endblock %}
+{% block content %}
+<section class="narrow panel">
+  <h1>교인 질문 게시판 인증</h1>
+  <p>운영자가 승인한 교인 명부와 이름·휴대전화 번호를 대조합니다. 인증문자 발송을 위해 SOLAPI가 수신번호를 처리합니다.</p>
+  <p>게시글에는 명부에 등록된 실명이 인증된 교인에게 표시됩니다. 전화번호는 게시판에 표시되지 않습니다.</p>
+  <p><a href="{% url 'policy' %}">운영·개인정보 안내</a></p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <label>명부에 등록된 이름<input name="name" autocomplete="name" maxlength="80" required></label>
+    <label>휴대전화 번호<input name="phone" type="tel" autocomplete="tel" maxlength="24" required></label>
+    <label><input type="checkbox" name="acknowledged" value="yes" required> 위 안내를 확인했습니다.</label>
+    <p><button type="submit">인증번호 요청</button></p>
+  </form>
+</section>
+{% endblock %}

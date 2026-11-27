@@ -2,12 +2,15 @@ from django.contrib import admin
 from django.urls import path
 from django.views.generic import TemplateView
 from portal import views as v
+from portal import board_auth
 from portal.business_number import evidence as business_number_evidence
 from portal import discussions as d
 from portal import material_views as m
 from portal import preparation as p
 from portal import appeals as a
 urlpatterns=[
+ path('board/auth/', board_auth.login, name='board_login'),
+ path('board/verify/', board_auth.verify, name='board_verify'),
  path('devotion/hymn-310/', TemplateView.as_view(template_name='portal/devotion_hymn.html'), name='devotion_hymn'),
  path('devotion/acts-17-30-31/', TemplateView.as_view(template_name='portal/devotion_acts.html'), name='devotion_acts'),
  path('business-number-evidence/<str:filename>/', business_number_evidence, name='business_number_evidence'),
@@ -21,7 +24,7 @@ urlpatterns=[
  path('prepare/events/<slug:key>/comments/',p.comment,name='prepare_comment'),
  path('materials/import/',m.memo_import,name='memo_import'),path('materials/candidates/<int:pk>/convert/',m.candidate_convert),
  path('admin/',admin.site.urls), path('admin-mfa/',v.admin_mfa),
- path('apply/',v.apply,name='apply'),path('login/',v.login,name='login'),path('otp/',v.otp),path('logout/',v.logout),path('policy/',v.policy,name='policy'),path('health/',v.health,name='health'),
+ path('apply/',v.apply,name='apply'),path('login/',v.login,name='login'),path('otp/',v.otp),path('logout/',v.logout,name='logout'),path('policy/',v.policy,name='policy'),path('health/',v.health,name='health'),
  path('exception/',v.exception_login),path('exception-issue/',v.exception_issue),path('roster/',v.roster),
  path('',v.cases,name='cases'),path('cases/archive/',v.legacy_cases,name='legacy_cases'),path('cases/<int:pk>/',v.case_detail,name='case'),path('cases/material/<slug:key>/',v.case_detail,name='fixed_case'),
  path('documents/<int:pk>/<str:kind>/',v.documents,name='document'),

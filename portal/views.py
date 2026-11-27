@@ -30,7 +30,9 @@ otp = legacy_entry
 @require_POST
 def logout(request):
     from .middleware import clear_member_session
+    from .board_auth import clear_board_session
     clear_member_session(request)
+    clear_board_session(request)
     rotate_token(request)
     return redirect('/')
 
@@ -119,7 +121,7 @@ def post_edit(request,pk=None):
             Revision.objects.create(target=f'post:{post.pk}',actor=str(request.member.pk),body={'title':old.title,'body':old.body}); obj.edited=True
         else: obj.member=request.member; obj.author_name=request.member.name
         obj.save(); return redirect('post',pk=obj.pk)
-    return render(request,'portal/form.html',{'form':form,'title':'실명 게시글 작성·수정','notice':'교인 전용 게시판에 등록된 실명으로 표시됩니다.'})
+    return render(request,'portal/form.html',{'form':form,'title':'실명 게시글 작성·수정','notice':'명부에 등록된 실명이 게시판에 표시됩니다.'})
 @require_POST
 def post_delete(request,pk):
     post=get_object_or_404(Post,pk=pk,member=request.member,deleted_at=None)
