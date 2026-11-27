@@ -29,8 +29,13 @@ class LandingTests(TestCase):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
         html = response.content.decode()
-        self.assertContains(response, '권한만큼,')
-        self.assertContains(response, '책임도 묻습니다.')
+        self.assertContains(response, '신사모 첫 모임 ·')
+        self.assertContains(response, '경건회 · 찬송가 310장 「아 하나님의 은혜로」 · 사도행전 17:30–31')
+        self.assertContains(response, '성도와 목회자가 함께 교회를 돌보고, 예배와 봉사를 이어갈 수 있도록 마음을 모읍니다.')
+        for anchor, label in (
+            ('dashboard', '현재 진행 상황'), ('fundraising', '모금 안내'), ('timeline', '시간순 사건 기록'),
+        ):
+            self.assertContains(response, f'href="#{anchor}">{label}</a>')
         self.assertContains(response, 'LAITY · 공동체의 질문')
         self.assertContains(response, '영상 준비 중', count=3)
         self.assertNotContains(response, '<video')
@@ -41,8 +46,10 @@ class LandingTests(TestCase):
         self.assertIn("default-src 'self'", response['Content-Security-Policy'])
         for anchor in ('videos', 'issues', 'timeline', 'dashboard', 'roadmap', 'progress-details', 'roadmap-details'):
             self.assertEqual(html.count(f'id="{anchor}"'), 1)
-        self.assertLess(html.index('id="videos"'), html.index('id="issues"'))
-        self.assertLess(html.index('id="issues"'), html.index('id="timeline"'))
+        order = ('hero-title', 'issues', 'registration-title', 'videos', 'dashboard', 'fundraising', 'timeline')
+        positions = [html.index(f'id="{anchor}"') for anchor in order]
+        self.assertEqual(positions, sorted(positions))
+        self.assertContains(response, 'class="issue-row"', count=5)
         self.assertIn('<details id="progress-details" class="full-details">', html)
         self.assertIn('<details id="roadmap-details" class="full-details">', html)
         parser = Links(); parser.feed(html)
@@ -62,6 +69,9 @@ class LandingTests(TestCase):
         self.assertNotContains(response, '등록일이 있는 경우')
         self.assertNotContains(response, '공개 사건 기록')
         self.assertContains(response, '<strong>214명</strong>')
+        self.assertContains(response, '<details class="registration-details">')
+        self.assertContains(response, '<summary>연도별 등록 현황 보기</summary>')
+        self.assertContains(response, '함께 확인하고 싶은 질문이나 나누고 싶은 자료가 있다면 모임 진행자에게 말씀해 주세요.')
         self.assertContains(response, '11월 26일 기준')
         self.assertContains(response, '2020년 이후 새가족 등록 현황')
         self.assertContains(response, 'datetime="2026-11-26"')

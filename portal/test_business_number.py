@@ -35,7 +35,7 @@ class BusinessNumberTests(TestCase):
         self.assertEqual(html.count('id="business-number-check"'), 1)
         self.assertEqual(html.count('href="#business-number-check"'), 1)
         self.assertLess(html.index('class="hero-description"'), html.index('class="business-number-card"'))
-        self.assertLess(html.index('class="business-number-card"'), html.index('class="fundraising-card"'))
+        self.assertLess(html.index('class="business-number-card"'), html.index('id="issues"'))
         self.assertLess(html.index('class="business-number-card"'), html.index('class="timeline"'))
         self.assertEqual(html.count('class="timeline-card"'), 72)
         self.assertEqual(html.count('<video '), 3)

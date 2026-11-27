@@ -28,7 +28,15 @@
     white-space: nowrap;
 }
 .registration-period { margin: .45rem 0 0; font-size: .9rem; }
-.registration-intro { max-width: 40rem; margin: 1rem 0; line-height: 1.65; }
+.meeting-devotion { margin: 0 0 1rem; line-height: 1.65; word-break: keep-all; }
+.landing .hero h1 { font-size: clamp(2rem, 5vw, 3.75rem); }
+.landing .hero-actions { margin-top: 1.5rem; gap: .75rem; }
+.landing .hero-actions a.button { text-decoration: none; color: #fff; }
+.landing .hero-actions a.secondary { color: var(--ink); }
+.registration-details { margin-top: 1rem; }
+.registration-details summary { min-height: 44px; padding: .55rem 0; font-weight: 700; }
+.registration-participation { margin: .75rem 0 0; line-height: 1.65; }
+.landing .fundraising-links { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin: 1rem 0; }
 .registration-bars { display: grid; gap: .55rem; margin: 1rem 0; }
 .registration-row { display: grid; grid-template-columns: 3.75rem minmax(0, 1fr); gap: .75rem; align-items: center; }
 .registration-row dd {

@@ -22,9 +22,7 @@ fs.mkdirSync(artifacts, { recursive: true });
       page.on('request', r => { if (r.resourceType() === 'media') mediaRequests.push(r.url()); });
       const response = await page.goto(base + '/');
       assert.equal(response.headers()['x-robots-tag'], 'noindex, nofollow');
-      const card = page.locator('.fundraising-card');
-      const action = card.getByRole('link', { name: '모금 취지와 참여 안내' });
-      // The new requested notice precedes this card; retain scroll-accessible operation.
+      const action = page.locator('.hero-actions').getByRole('link', { name: '모금 안내', exact: true });
       await action.scrollIntoViewIfNeeded();
       const box = await action.boundingBox();
       assert.ok(box.y >= 0 && box.y + box.height <= page.viewportSize().height, 'fundraising action must be visible after scrolling');
@@ -43,6 +41,15 @@ fs.mkdirSync(artifacts, { recursive: true });
       const heading = await page.locator('#fundraising-title').boundingBox();
       assert.ok(heading.y >= 0 && heading.y < page.viewportSize().height);
       assert.equal(await page.locator('.fundraising-body').evaluate(e => !!e.closest('details')), false);
+      for (const [name, id] of [
+        ['모금 목적', 'fundraising-purpose'],
+        ['관리·보고 방식', 'fundraising-management'],
+        ['후원 계좌', 'fundraising-account-title'],
+      ]) {
+        await page.locator('.fundraising-links').getByRole('link', { name, exact: true }).click();
+        assert.equal(new URL(page.url()).hash, '#' + id);
+        assert.equal(await page.locator('#' + id).isVisible(), true);
+      }
       await page.locator('#fundraising').screenshot({ path: path.join(artifacts, `${width}-detail.png`) });
       await page.goto(base + '/#fundraising');
       assert.equal(await page.locator('#fundraising').isVisible(), true);
@@ -56,10 +63,13 @@ fs.mkdirSync(artifacts, { recursive: true });
       await page.getByRole('button', { name: '계좌번호 복사' }).click();
       await page.waitForFunction(() => document.querySelector('.fundraising-copy-result').textContent === '계좌번호가 복사되었습니다');
       assert.equal(await page.evaluate(() => navigator.clipboard.readText()), '3333090895440');
-      for (const hash of ['videos', 'issues', 'dashboard', 'roadmap', 'timeline']) {
+      for (const hash of ['videos', 'issues', 'dashboard', 'roadmap']) {
         await page.goto(base + '/#' + hash);
         assert.equal(await page.locator('#' + hash).isVisible(), true);
       }
+      await page.goto(base + '/');
+      await page.locator('.hero-actions').getByRole('link', { name: '시간순 사건 기록' }).click();
+      assert.equal(new URL(page.url()).hash, '#timeline');
       await page.locator('.timeline-card').first().click();
       assert.match(page.url(), /\/cases\/material\/T01\/$/);
       await page.goBack();
@@ -67,7 +77,7 @@ fs.mkdirSync(artifacts, { recursive: true });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       assert.deepEqual(errors, []); assert.deepEqual(failures, []);
       assert.equal(mediaRequests.length, 0);
-      results.push({ width, scrolledCardAction: 'pass', keyboardAndFragment: 'pass', accountAndClipboard: 'pass', existingLinks: 'pass', overflow: false, consoleErrors: [], initialMediaRequests: 0 });
+      results.push({ width, meetingShortcut: 'pass', keyboardAndFragment: 'pass', accountAndClipboard: 'pass', existingLinks: 'pass', overflow: false, consoleErrors: [], initialMediaRequests: 0 });
       await context.close();
     }
     for (const mode of ['denied', 'unavailable']) {

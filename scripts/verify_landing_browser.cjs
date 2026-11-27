@@ -28,6 +28,13 @@ fs.mkdirSync(artifacts, { recursive: true });
       const chart = page.getByRole('region', { name: '2020년 이후 새가족 등록 현황' });
       assert.equal(await chart.isVisible(), true);
       assert.equal(await chart.locator('.registration-headline strong').innerText(), '214명');
+      const graph = chart.locator('.registration-details');
+      assert.equal(await graph.getAttribute('open'), null);
+      assert.equal(await graph.locator('.registration-bars').isVisible(), false);
+      assert.equal(await chart.locator('.registration-participation').isVisible(), true);
+      await graph.locator('summary').focus();
+      await page.keyboard.press('Enter');
+      assert.equal(await graph.locator('.registration-bars').isVisible(), true);
       assert.equal(await chart.locator('.registration-value small').innerText(), '11월 26일 기준');
       assert.equal(await chart.locator('.registration-row-highlight').count(), 4);
       assert.deepEqual(await chart.locator('dt').allTextContents(),
@@ -48,21 +55,23 @@ fs.mkdirSync(artifacts, { recursive: true });
       await page.screenshot({ path: path.join(artifacts, `${width}-${ready ? 'ready' : 'pending'}-first.png`) });
       await page.screenshot({ path: path.join(artifacts, `${width}-${ready ? 'ready' : 'pending'}-full.png`), fullPage: true });
       const initialMediaRequests = mediaRequests.length;
-      await page.getByRole('link', { name: '핵심 내용 보기' }).click();
-      assert.equal(new URL(page.url()).hash, '#videos');
-      await page.getByRole('link', { name: '사건 기록 살펴보기' }).click();
-      assert.equal(new URL(page.url()).hash, '#timeline');
+      const shortcuts = page.locator('.hero-actions');
+      for (const [label, hash] of [['현재 진행 상황', 'dashboard'], ['모금 안내', 'fundraising'], ['시간순 사건 기록', 'timeline']]) {
+        await shortcuts.getByRole('link', { name: label, exact: true }).click();
+        assert.equal(new URL(page.url()).hash, '#' + hash);
+        assert.equal(await page.locator('#' + hash).isVisible(), true);
+      }
       await page.goBack();
-      assert.equal(new URL(page.url()).hash, '#videos');
+      assert.equal(new URL(page.url()).hash, '#fundraising');
       for (const hash of ['dashboard', 'roadmap', 'timeline', 'progress-details', 'roadmap-details']) {
         await page.goto(base + '/#' + hash);
         assert.equal(await page.locator('#' + hash).isVisible(), true);
         if (hash.endsWith('details')) assert.equal(await page.locator('#' + hash).getAttribute('open'), '');
       }
       await page.goto(base + '/');
-      const related = page.locator('.video-card .related-records summary').first();
+      const related = page.locator('.issue-row .related-records summary').first();
       await related.focus(); await page.keyboard.press('Enter');
-      const detailLink = page.locator('.video-card .related-records a').first();
+      const detailLink = page.locator('.issue-row .related-records a').first();
       assert.equal(await detailLink.isVisible(), true);
       await detailLink.click();
       assert.match(page.url(), /\/cases\/material\/T24\/$/);
