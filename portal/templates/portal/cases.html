@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}권한만큼, 책임도 묻습니다 | LAITY · 공동체의 질문{% endblock %}
 {% block body_class %}landing{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'portal/business-number.css' %}"><script defer src="{% static 'portal/business-number.js' %}"></script><link rel="stylesheet" href="{% static 'portal/fundraising.css' %}"><script defer src="{% static 'portal/fundraising.js' %}"></script><link rel="stylesheet" href="{% static 'portal/landing.css' %}"><script defer src="{% static 'portal/landing.js' %}"></script>{% endblock %}
+{% block extra_head %}{% if show_business_number_card %}<link rel="stylesheet" href="{% static 'portal/business-number.css' %}"><script defer src="{% static 'portal/business-number.js' %}"></script>{% endif %}<link rel="stylesheet" href="{% static 'portal/fundraising.css' %}"><script defer src="{% static 'portal/fundraising.js' %}"></script><link rel="stylesheet" href="{% static 'portal/landing.css' %}"><script defer src="{% static 'portal/landing.js' %}"></script>{% endblock %}
 {% block content %}
 {% include 'portal/reading_styles.html' %}
 <section class="hero" aria-labelledby="hero-title">
@@ -49,6 +49,6 @@
 <p>첨부 개정본의 {{ timeline_entries|length }}개 항목을 01~72번 순서로 표시합니다. 표시 번호는 고유 식별자나 공식 사건번호가 아니며 기존 사건 URL·의견 연결은 그대로 유지합니다. 날짜 표현은 원문 그대로이며, 반복·기간·미확인 일자를 임의로 확정하거나 다시 정렬하지 않습니다. 사건 구분은 법적으로 사건들이 병합됐다는 의미가 아닙니다.</p>
 <ol class="timeline">{% for entry in timeline_entries %}{% include 'portal/timeline_item.html' %}{% endfor %}</ol>
 <p><a href="{% url 'legacy_cases' %}">기존 정리 E01~E30 보기</a> · 기존 게시글·댓글은 원래 사건번호에 그대로 남습니다.</p></section>
-{% include 'portal/business_number_check.html' %}
+{% if show_business_number_card %}{% include 'portal/business_number_check.html' %}{% endif %}
 {% include 'portal/fundraising.html' %}
 {% endblock %}

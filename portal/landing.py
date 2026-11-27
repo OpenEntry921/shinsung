@@ -1,4 +1,6 @@
 """Public landing metadata only; never loads member or preparation records."""
+from datetime import date
+
 from django.conf import settings
 from django.contrib.staticfiles import finders
 from django.contrib.staticfiles.storage import staticfiles_storage
@@ -21,6 +23,8 @@ VIDEOS = (
 )
 
 # Published aggregates only. Known registration dates take precedence over report years.
+REGISTRATION_CUTOFF = date(2026, 11, 26)
+REGISTRATION_HIGHLIGHT_START = 2023
 ANNUAL_REGISTRATIONS = ((2020, 3), (2021, 2), (2022, 2), (2023, 24),
                         (2024, 82), (2025, 62), (2026, 46))
 ISSUES = (
@@ -67,4 +71,10 @@ def landing_context(entries, groups):
     ]
     return dict(home_videos=videos, home_issues=issues, recent_records=recent,
                 show_business_number_card=settings.SHOW_BUSINESS_NUMBER_CARD,
-                annual_registrations=registrations)
+                annual_registrations=registrations,
+                registration_highlight_start=REGISTRATION_HIGHLIGHT_START,
+                registration_cutoff=REGISTRATION_CUTOFF,
+                registration_highlight_total=sum(
+                    count for year, count in ANNUAL_REGISTRATIONS
+                    if year >= REGISTRATION_HIGHLIGHT_START and count is not None
+                ))

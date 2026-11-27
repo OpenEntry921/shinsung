@@ -1,21 +1,21 @@
 <section class="registration-chart" aria-labelledby="registration-title">
   <h2 id="registration-title">2020년 이후 새가족 등록 현황</h2>
-  <p>2020년부터 <time datetime="2026-11-26">2026년 11월 26일</time>까지 자료에서 확인된 신규 등록 인원입니다.</p>
+  <p class="registration-headline">{{ registration_highlight_start }}년 이후 새가족 <strong>{{ registration_highlight_total }}명</strong> 등록</p>
+  <p class="registration-period">{{ registration_highlight_start }}년~<time datetime="{{ registration_cutoff|date:'Y-m-d' }}">{{ registration_cutoff|date:'Y년 n월 j일' }}</time></p>
+  <p class="registration-intro">코로나19 유행기인 2020년, 송재용 목사가 부임했습니다. 일상이 회복되는 시기인 2023년부터 새가족 등록이 이전보다 크게 늘었습니다. 송 목사와 교역자들이 새가족을 맞이하며 이어 온 사역을 등록 흐름과 함께 살펴봅니다.</p>
   <dl class="registration-bars">
     {% for registration in annual_registrations %}
-    <div class="registration-row">
+    <div class="registration-row{% if registration.year >= registration_highlight_start %} registration-row-highlight{% endif %}">
       <dt>{{ registration.year }}년</dt>
       <dd>
         {% if registration.count is not None %}
         <span class="registration-track" aria-hidden="true"><span style="width: {{ registration.width }}%"></span></span>
-        <span>{{ registration.count }}명</span>
+        <span class="registration-value">{{ registration.count }}명{% if registration.year == registration_cutoff.year %}<small>{{ registration_cutoff|date:'n월 j일' }} 기준</small>{% endif %}</span>
         {% else %}
-        <span></span><span>자료 없음</span>
+        <span></span><span class="registration-value">자료 없음</span>
         {% endif %}
       </dd>
     </div>
     {% endfor %}
   </dl>
-  <p class="registration-note">등록일이 있는 경우 해당 연도로 집계했습니다. 2020·2021년은 자료에 개별 등록일이 없어 문서의 연도를 적용했습니다. 2026년은 11월 26일 기준 부분 집계입니다.</p>
-  <p class="registration-note"><a href="{% url 'fixed_case' 'T01' %}">공개 사건 기록</a>에는 위임목사의 2020년 부임 경과가 나옵니다. 세부 날짜는 자료마다 다르게 기재되어 있습니다.</p>
 </section>

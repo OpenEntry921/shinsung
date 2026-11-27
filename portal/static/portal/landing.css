@@ -4,25 +4,43 @@
 @media(prefers-reduced-motion:no-preference){.hero-actions a:hover,.video-player summary:hover .play-label{filter:brightness(.93)}}
 
 .registration-chart {
-    max-width: 42rem;
+    max-width: 54rem;
     margin: 1.5rem 0;
     padding: clamp(1rem, 3vw, 1.75rem);
     border: 1px solid #c2d2c9;
+    border-top: 4px solid #16724f;
     border-radius: .75rem;
     background: #edf4ef;
     color: #19392c;
 }
 .registration-chart h2 { margin: 0 0 .5rem; }
+.registration-headline {
+    margin: .5rem 0 0;
+    font-size: clamp(1.2rem, 3.3vw, 2rem);
+    font-weight: 700;
+    line-height: 1.2;
+    word-break: keep-all;
+}
+.registration-headline strong {
+    color: #126947;
+    font-size: clamp(2.6rem, 6vw, 4.5rem);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.registration-period { margin: .45rem 0 0; font-size: .9rem; }
+.registration-intro { max-width: 40rem; margin: 1rem 0; line-height: 1.65; }
 .registration-bars { display: grid; gap: .55rem; margin: 1rem 0; }
 .registration-row { display: grid; grid-template-columns: 3.75rem minmax(0, 1fr); gap: .75rem; align-items: center; }
 .registration-row dd {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 4.5rem;
+    grid-template-columns: minmax(0, 1fr) 6.5rem;
     gap: .6rem;
     align-items: center;
     margin: 0;
     font-variant-numeric: tabular-nums;
 }
 .registration-track { height: .65rem; background: #d6e3d9; border-radius: 1rem; }
-.registration-track span { display: block; height: 100%; border-radius: inherit; background: #347557; }
-.registration-note { margin: .45rem 0 0; font-size: .9rem; }
+.registration-track span { display: block; height: 100%; border-radius: inherit; background: #698278; }
+.registration-row-highlight .registration-track span { background: #16724f; }
+.registration-row-highlight .registration-value { font-weight: 700; }
+.registration-value small { display: block; font-size: .75rem; font-weight: 400; }

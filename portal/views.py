@@ -59,7 +59,7 @@ def cases(request):
     return render(request, 'portal/cases.html', {
         **landing_context(entries, groups),
         'fundraising': fundraising_context(),
-        'business_number': business_number_context(),
+        'business_number': business_number_context() if settings.SHOW_BUSINESS_NUMBER_CARD else None,
         'timeline_entries': entries,
         'dashboard_groups': groups,
         'roadmap': [(n, title, RoadmapStage.objects.filter(step=n).first()) for n, title in RoadmapStage.STEPS],
