@@ -68,7 +68,12 @@ class LandingTests(TestCase):
             with self.subTest(path=path):
                 response = self.client.get(path)
                 self.assertContains(response, f'<h1 id="devotion-title">{title}</h1>')
-                self.assertContains(response, 'target="_blank" rel="noopener noreferrer"')
+                if path.endswith('/hymn-310/'):
+                    self.assertContains(response, 'target="_blank" rel="noopener noreferrer"')
+                else:
+                    self.assertNotContains(response, 'acts-17-30-31.png')
+                    self.assertContains(response, '<ol start="30">')
+                    self.assertContains(response, '<li>', count=2)
                 self.assertContains(response, 'href="/#devotion">홈으로 돌아가기</a>')
                 self.assertEqual(self.client.head(path).status_code, 200)
                 self.assertNotEqual(self.client.post(path).status_code, 200)
