@@ -33,6 +33,7 @@
 .landing .hero-actions { margin-top: 1.5rem; gap: .75rem; }
 .landing .hero-actions a.button { text-decoration: none; color: #fff; }
 .landing .hero-actions a.secondary { color: var(--ink); }
+.registration-ministry { max-width: 42rem; margin: 1rem 0 0; line-height: 1.65; }
 .registration-details { margin-top: 1rem; }
 .registration-details summary { min-height: 44px; padding: .55rem 0; font-weight: 700; }
 .registration-participation { margin: .75rem 0 0; line-height: 1.65; }
