@@ -23,12 +23,17 @@ fs.mkdirSync(artifacts, { recursive: true });
       await page.goto(base + '/');
       await page.evaluate(() => document.fonts.ready);
       assert.equal(await page.locator('.business-number-card').count(), 0);
+      assert.equal(await page.locator('#business-number-check').count(), 0);
+      assert.equal(await page.locator('a[href*="business-number-evidence"]').count(), 0);
       const chart = page.getByRole('region', { name: '2020년 이후 새가족 등록 현황' });
       assert.equal(await chart.isVisible(), true);
+      assert.equal(await chart.locator('.registration-headline strong').innerText(), '214명');
+      assert.equal(await chart.locator('.registration-value small').innerText(), '11월 26일 기준');
+      assert.equal(await chart.locator('.registration-row-highlight').count(), 4);
       assert.deepEqual(await chart.locator('dt').allTextContents(),
         ['2020년', '2021년', '2022년', '2023년', '2024년', '2025년', '2026년']);
       assert.deepEqual(await chart.locator('dd > span:last-child').allTextContents(),
-        ['3명', '2명', '2명', '24명', '82명', '62명', '46명']);
+        ['3명', '2명', '2명', '24명', '82명', '62명', '46명11월 26일 기준']);
       assert.deepEqual(await page.locator('.video-card h3').allTextContents(),
         ['권한에 책임이 뒤따릅니다', '누가 매일 나오랍니까?', '본질을 훼손 마세요']);
       assert.equal(await page.locator('.timeline-card').count(), 72);

@@ -1,5 +1,6 @@
 from django.shortcuts import redirect
-from django.http import HttpResponseForbidden
+from django.conf import settings
+from django.http import HttpResponseForbidden, HttpResponseNotFound
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.urls import resolve, Resolver404
@@ -24,9 +25,23 @@ def public_read(request):
         match = resolve(request.path_info)
     except Resolver404:
         return False
-    return match.url_name in ('cases', 'legacy_cases', 'case', 'fixed_case', 'policy', 'health') or (
+    return match.url_name in ('cases', 'legacy_cases', 'case', 'fixed_case', 'policy', 'health', 'business_number_evidence') or (
         match.url_name == 'document' and match.kwargs['kind'] == 'reading'
     )
+
+
+class RetiredEvidenceStaticMiddleware:
+    """Block legacy evidence URLs even if old collected copies still exist."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path_info.startswith(f"{settings.STATIC_URL}portal/business-number/"):
+            response = HttpResponseNotFound()
+            response['Cache-Control'] = 'no-store'
+            return response
+        return self.get_response(request)
 
 
 class AccessMiddleware:

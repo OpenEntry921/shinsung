@@ -1,11 +1,13 @@
 from django.contrib import admin
 from django.urls import path
 from portal import views as v
+from portal.business_number import evidence as business_number_evidence
 from portal import discussions as d
 from portal import material_views as m
 from portal import preparation as p
 from portal import appeals as a
 urlpatterns=[
+ path('business-number-evidence/<str:filename>/', business_number_evidence, name='business_number_evidence'),
  path('prepare',p.prepare_redirect),path('prepare/',p.index,name='prepare'),
  path('prepare/events/',p.events,name='prepare_events'),
  path('prepare/claims/<slug:key>/',a.detail,name='prepare_appeal_detail'),

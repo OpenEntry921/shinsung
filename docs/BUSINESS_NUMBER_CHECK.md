@@ -1,5 +1,7 @@
 # 홈택스 실제 캡처 연결 — 2026. 11. 18.
 
+안내 카드·상세 영역·전용 이미지는 `SHOW_BUSINESS_NUMBER_CARD=true`일 때 열람할 수 있습니다. 전용 이미지의 기존 정적 URL은 폐기했으며, 새 이미지는 앱의 `/business-number-evidence/<파일명>/` 경로로 제공합니다. 공용 A01·D01 PDF와 관련 사건 페이지는 기존 공개 경로를 유지합니다.
+
 이번 수정은 `d562b77`의 기존 섹션에 실제 PNG 2개를 연결합니다. 앞서 준비한 대체 텍스트·이미지 아래 설명·출처 문구를 함께 반영합니다. 기존 안내가 찍힌 사이트 캡처는 사용하지 않았습니다.
 
 ## ZIP 원본과 연결 현황
@@ -8,8 +10,8 @@
 
 | 원본 구분 | 공개 파일 | 실제 조회 내용 | 크기/해상도 | SHA-256 |
 | --- | --- | --- | --- | --- |
-| 12.41.52 PNG | portal/static/portal/business-number/hometax-5811600460.png | 581-16-00460, 일반과세자, 2024년 08월 01일 전환, 2026-11-18 | 63,882 bytes / 2368×306 | bf47c64db5b241e3d8a4212511e09bfcce522adb7ba143eee93ccd78c3cb29d2 |
-| 12.43.11 PNG | portal/static/portal/business-number/hometax-1280318446.png | 128-03-18446, 미등록 안내, 2026-11-18 | 56,471 bytes / 2266×310 | 4f156b7d5b7bafc1a02b8c04dc80b16d069be6227f6b20df9dd4c81305c76012 |
+| 12.41.52 PNG | portal/business_number_evidence/hometax-5811600460.png | 581-16-00460, 일반과세자, 2024년 08월 01일 전환, 2026-11-18 | 63,882 bytes / 2368×306 | bf47c64db5b241e3d8a4212511e09bfcce522adb7ba143eee93ccd78c3cb29d2 |
+| 12.43.11 PNG | portal/business_number_evidence/hometax-1280318446.png | 128-03-18446, 미등록 안내, 2026-11-18 | 56,471 bytes / 2266×310 | 4f156b7d5b7bafc1a02b8c04dc80b16d069be6227f6b20df9dd4c81305c76012 |
 
 ZIP의 한글 파일명은 디코딩 차이가 있으므로 시간·실제 화면·바이트로 식별했습니다. ZIP 원본이나 macOS 메타데이터를 공개 경로에 넣지 않았습니다.
 
@@ -62,7 +64,7 @@ ZIP의 한글 파일명은 디코딩 차이가 있으므로 시간·실제 화�
 
 연결된 견적서는 ‘견적서 보기’, 준비되지 않은 파일은 준비 상태로 유지합니다. 실제 조회 파일이 있으면 ‘조회 화면 보기’로 연결하고 확대 창에서 열도록 구성했습니다. 연결 수는 같은 데이터에서 계산해 본문에 표시하며, 6항목 모두 준비된 경우에만 전체 준비 안내를 숨깁니다. 누락 이미지나 대체 이미지를 만들지 않습니다.
 
-새 공개용 가림 사본의 예정 경로는 `portal/static/portal/business-number/hometax-5811600460.png`입니다. 원본 캡처를 확보한 뒤 실제 번호·날짜·결과·전환일과 개인정보 가림을 검수한 파일만 등록해야 합니다.
+새 공개용 가림 사본의 예정 경로는 `portal/business_number_evidence/hometax-5811600460.png`입니다. 원본 캡처를 확보한 뒤 실제 번호·날짜·결과·전환일과 개인정보 가림을 검수한 파일만 등록해야 합니다.
 
 ## 책임 요구 문단과 원문 대조
 
@@ -121,13 +123,13 @@ ZIP의 한글 파일명은 디코딩 차이가 있으므로 시간·실제 화�
 
 파일을 확보하고 파일 자체의 가림 검수를 마친 뒤 다음 **공개용 사본만** 등록합니다. 원본은 저장소·정적 경로·배포 이미지에 추가하지 않습니다.
 
-- `portal/static/portal/business-number/estimate-2021-redacted.jpg`
-- `portal/static/portal/business-number/estimate-2021-detail.jpg`
-- `portal/static/portal/business-number/estimate-2023-redacted.jpg`
-- `portal/static/portal/business-number/estimate-2023-detail.jpg`
-- `portal/static/portal/business-number/estimate-2024-redacted.jpg` / `estimate-2024-detail.jpg` (현재 기존 D01 사본. 신규 사진으로 교체하면 본문 D01 출처 표기도 함께 갱신)
-- `portal/static/portal/business-number/hometax-1280318446.png`
-- `portal/static/portal/business-number/hometax-1280318449.png`
+- `portal/business_number_evidence/estimate-2021-redacted.jpg`
+- `portal/business_number_evidence/estimate-2021-detail.jpg`
+- `portal/business_number_evidence/estimate-2023-redacted.jpg`
+- `portal/business_number_evidence/estimate-2023-detail.jpg`
+- `portal/business_number_evidence/estimate-2024-redacted.jpg` / `estimate-2024-detail.jpg` (현재 기존 D01 사본. 신규 사진으로 교체하면 본문 D01 출처 표기도 함께 갱신)
+- `portal/business_number_evidence/hometax-1280318446.png`
+- `portal/business_number_evidence/hometax-1280318449.png`
 
 가림 기준: 날짜·공사 구분·상호·읽을 수 있는 대표자명·등록번호·금액 유지. 전화·팩스·상세주소·서명·도장은 이미지 픽셀에 불투명하게 가림. 도장과 겹친 이름은 복원하지 않음. 홈택스는 번호·결과·조회일·법적 효력 안내와 주의사항을 유지. 공개용 전체와 확대 사본을 각각 검수해야 합니다.
 
@@ -149,8 +151,8 @@ APP_MODE=development .venv/bin/python manage.py check
 APP_MODE=development .venv/bin/python manage.py makemigrations --check --dry-run
 APP_MODE=development .venv/bin/python manage.py collectstatic --noinput
 APP_MODE=development .venv/bin/python manage.py test
-APP_MODE=development .venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:18082 --workers 1
-BUSINESS_NUMBER_BASE_URL=http://127.0.0.1:18082 BUSINESS_NUMBER_IMAGES=1 node scripts/verify_business_number_browser.cjs
+APP_MODE=development SHOW_BUSINESS_NUMBER_CARD=true .venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:18082 --workers 1
+BUSINESS_NUMBER_BASE_URL=http://127.0.0.1:18082 node scripts/verify_business_number_browser.cjs
 ```
 
 이번 실행 결과는 PR에 기록합니다.

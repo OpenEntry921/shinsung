@@ -8,6 +8,7 @@ from .business_number import ESTIMATES, QUERIES, REGISTERED_QUERY, business_numb
 
 from django.conf import settings
 from django.test import TestCase, override_settings
+from django.urls import reverse
 
 
 class ComparisonRows(HTMLParser):
@@ -25,9 +26,8 @@ class ComparisonRows(HTMLParser):
             self.row = None
 
 
-@override_settings(SECURE_SSL_REDIRECT=False)
+@override_settings(SECURE_SSL_REDIRECT=False, SHOW_BUSINESS_NUMBER_CARD=True)
 class BusinessNumberTests(TestCase):
-    @override_settings(SHOW_BUSINESS_NUMBER_CARD=True)
     def test_public_placement_and_existing_content(self):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
@@ -44,6 +44,23 @@ class BusinessNumberTests(TestCase):
         self.assertEqual(response['X-Robots-Tag'], 'noindex, nofollow')
         self.assertIn("default-src 'self'", response['Content-Security-Policy'])
         self.assertEqual(self.client.head('/').status_code, 200)
+
+    def test_evidence_is_served_only_when_enabled(self):
+        filename = 'hometax-5811600460.png'
+        url = reverse('business_number_evidence', kwargs={'filename': filename})
+        self.assertContains(self.client.get('/'), url)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'image/png')
+        self.assertIn('no-store', response['Cache-Control'])
+        self.assertEqual(
+            b''.join(response.streaming_content),
+            (settings.BASE_DIR / 'portal/business_number_evidence' / filename).read_bytes(),
+        )
+        with self.settings(SHOW_BUSINESS_NUMBER_CARD=False):
+            self.assertEqual(self.client.get(url).status_code, 404)
+            self.assertEqual(self.client.head(url).status_code, 404)
+            self.assertEqual(self.client.get('/static/portal/business-number/' + filename).status_code, 404)
 
     def test_comparison_and_calculation_agree(self):
         html = self.client.get('/').content.decode().split('id="business-number-check"', 1)[1]
@@ -66,7 +83,7 @@ class BusinessNumberTests(TestCase):
         self.assertIn('= <strong>9</strong>', html)
         self.assertIn('검증 계산을 통과하더라도 실제 등록된 번호라는 뜻은 아닙니다.', html)
 
-    @patch('portal.business_number.asset_url', return_value='')
+    @patch('portal.business_number.evidence_url', return_value='')
     def test_missing_evidence_has_no_broken_or_substitute_image_links(self, _asset):
         context = business_number_context()
         self.assertEqual(len(context['missing']), 6)
@@ -78,7 +95,7 @@ class BusinessNumberTests(TestCase):
         self.assertNotIn('<img ', html)
         self.assertNotIn('data-business-evidence data-', html)
 
-    @patch('portal.business_number.asset_url', side_effect=lambda path: '/static/' + path)
+    @patch('portal.business_number.evidence_url', side_effect=lambda path: '/business-number-evidence/' + path + '/')
     def test_all_six_reviewed_assets_have_correct_connections(self, _asset):
         context = business_number_context()
         self.assertEqual(context['missing'], [])
@@ -90,15 +107,15 @@ class BusinessNumberTests(TestCase):
         self.assertNotIn('준비 상태 보기', html)
         self.assertNotIn('캡처 파일 미확보', html)
         self.assertIn('현재 이 페이지에서 연결된 공개 증빙은 6개', html)
-        self.assertIn('/static/portal/business-number/hometax-5811600460.png', html)
+        self.assertIn('/business-number-evidence/hometax-5811600460.png/', html)
         self.assertIn('조회 화면 보기', html)
         for row in ESTIMATES:
             self.assertIn('id="' + row['key'] + '"', html)
             self.assertIn(row['amount'], html)
-            self.assertIn('/static/portal/business-number/' + row['key'] + '-redacted.jpg', html)
-            self.assertIn('/static/portal/business-number/' + row['key'] + '-detail.jpg', html)
+            self.assertIn('/business-number-evidence/' + row['key'] + '-redacted.jpg/', html)
+            self.assertIn('/business-number-evidence/' + row['key'] + '-detail.jpg/', html)
         for row in QUERIES:
-            self.assertIn('/static/portal/business-number/' + row['key'] + '.png', html)
+            self.assertIn('/business-number-evidence/' + row['key'] + '.png/', html)
         self.assertIn('data-business-evidence-close', html)
         self.assertIn('data-business-evidence-zoom', html)
 
@@ -150,7 +167,7 @@ class BusinessNumberTests(TestCase):
         for phrase in ('불법인 줄 알면서', '알면서 노회를 속였다', '탈세했다', '횡령했다', '750만원', '750만 원', '업체가 존재하지 않는다', '실체 없는 업체'):
             self.assertNotIn(phrase, box)
 
-    @patch('portal.business_number.asset_url', side_effect=lambda path: '/static/' + path if path.endswith('hometax-5811600460.png') else '')
+    @patch('portal.business_number.evidence_url', side_effect=lambda path: '/business-number-evidence/' + path + '/' if path.endswith('hometax-5811600460.png') else '')
     def test_registered_query_ready_does_not_clear_other_missing_states(self, _asset):
         context = business_number_context()
         self.assertEqual(context['connected_count'], 1)
@@ -171,7 +188,7 @@ class BusinessNumberTests(TestCase):
         import hashlib
         expected = {'hometax-5811600460.png': 'bf47c64db5b241e3d8a4212511e09bfcce522adb7ba143eee93ccd78c3cb29d2', 'hometax-1280318446.png': '4f156b7d5b7bafc1a02b8c04dc80b16d069be6227f6b20df9dd4c81305c76012'}
         for name, digest in expected.items():
-            path = Path(settings.BASE_DIR) / 'portal/static/portal/business-number' / name
+            path = Path(settings.BASE_DIR) / 'portal/business_number_evidence' / name
             self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), digest)
         context = business_number_context()
         self.assertEqual(context['connected_count'], 3)

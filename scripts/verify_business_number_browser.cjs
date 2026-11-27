@@ -5,7 +5,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 const base = process.env.BUSINESS_NUMBER_BASE_URL || 'http://127.0.0.1:18082';
 const artifacts = process.env.BUSINESS_NUMBER_ARTIFACTS || '/tmp/business-number-evidence';
-const showCard = process.env.SHOW_BUSINESS_NUMBER_CARD === 'true';
 const expectedImages = Number(process.env.BUSINESS_NUMBER_IMAGES || 3);
 fs.mkdirSync(artifacts, { recursive: true });
 (async () => {
@@ -28,16 +27,11 @@ fs.mkdirSync(artifacts, { recursive: true });
       assert.equal(await page.locator('video[preload="none"][controls][playsinline]').count(), 3);
       assert.equal(await page.locator('#fundraising').count(), 1);
       assert.equal(await page.locator('a[href^="/prepare"]').count(), 0);
-      assert.equal(await page.evaluate(() => document.querySelector('.hero-description').nextElementSibling.className), showCard ? 'business-number-card' : 'registration-chart');
+      assert.equal(await page.evaluate(() => document.querySelector('.hero-description').nextElementSibling.className), 'business-number-card');
       await page.screenshot({ path: path.join(artifacts, 'card-' + width + '.png') });
       const button = page.getByRole('link', { name: '견적서와 조회 결과 확인하기', exact: true });
-      if (showCard) {
-        await button.focus(); await page.keyboard.press('Enter');
-        await page.waitForURL('**/#business-number-check');
-      } else {
-        assert.equal(await button.count(), 0);
-        await page.goto(base + '/#business-number-check');
-      }
+      await button.focus(); await page.keyboard.press('Enter');
+      await page.waitForURL('**/#business-number-check');
       assert.ok(await page.locator('#business-number-title').evaluate(el => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom < innerHeight; }));
       const section = page.locator('#business-number-check');
       assert.equal(await section.locator('img').count(), expectedImages);
@@ -76,7 +70,7 @@ fs.mkdirSync(artifacts, { recursive: true });
       for (let i = 0; i < await links.count(); i++) {
         const link = links.nth(i);
         const href = await link.getAttribute('href');
-        assert.match(href, /\/static\/portal\/business-number\/[^/]+\.[a-f0-9]{12}\.(jpg|png)/);
+        assert.match(href, /^\/business-number-evidence\/[^/]+\.(jpg|png)\/$/);
         const imageResponse = await context.request.get(base + href);
         assert.equal(imageResponse.status(), 200);
         assert.match(imageResponse.headers()['content-type'], /^image\//);
@@ -109,11 +103,7 @@ fs.mkdirSync(artifacts, { recursive: true });
     const nojs = await browser.newContext({ javaScriptEnabled:false, viewport:{width:390,height:844} });
     const page = await nojs.newPage();
     await page.goto(base + '/');
-    if (showCard) {
-      await page.getByRole('link', { name: '견적서와 조회 결과 확인하기', exact: true }).click();
-    } else {
-      await page.goto(base + '/#business-number-check');
-    }
+    await page.getByRole('link', { name: '견적서와 조회 결과 확인하기', exact: true }).click();
     assert.equal(new URL(page.url()).hash, '#business-number-check');
     const href = await page.locator('[data-business-evidence]').first().getAttribute('href');
     await page.locator('[data-business-evidence]').first().click();
