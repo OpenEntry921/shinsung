@@ -1,0 +1,10 @@
+{% extends 'portal/base.html' %}
+{% block title %}{{ block.super }} · 경건회{% endblock %}
+{% block content %}
+<section class="panel" aria-labelledby="devotion-title">
+  <p class="eyebrow">신사모 첫 모임 · 경건회</p>
+  <h1 id="devotion-title">{% block resource_title %}{% endblock %}</h1>
+  {% block resource %}{% endblock %}
+  <p><a class="button" href="{% url 'cases' %}#devotion">홈으로 돌아가기</a></p>
+</section>
+{% endblock %}

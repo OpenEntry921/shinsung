@@ -25,7 +25,8 @@ def public_read(request):
         match = resolve(request.path_info)
     except Resolver404:
         return False
-    return match.url_name in ('cases', 'legacy_cases', 'case', 'fixed_case', 'policy', 'health', 'business_number_evidence') or (
+    return match.url_name in ('cases', 'legacy_cases', 'case', 'fixed_case', 'policy', 'health', 'business_number_evidence',
+        'devotion_hymn', 'devotion_acts') or (
         match.url_name == 'document' and match.kwargs['kind'] == 'reading'
     )
 

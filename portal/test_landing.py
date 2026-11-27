@@ -30,7 +30,9 @@ class LandingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         html = response.content.decode()
         self.assertContains(response, '신사모 첫 모임 ·')
-        self.assertContains(response, '경건회 · 찬송가 310장 「아 하나님의 은혜로」 · 사도행전 17:30–31')
+        self.assertContains(response, 'id="devotion"')
+        self.assertContains(response, 'href="/devotion/hymn-310/">찬송가 310장 「아 하나님의 은혜로」')
+        self.assertContains(response, 'href="/devotion/acts-17-30-31/">사도행전 17:30–31')
         self.assertContains(response, '성도와 목회자가 함께 교회를 돌보고, 예배와 봉사를 이어갈 수 있도록 마음을 모읍니다.')
         for anchor, label in (
             ('dashboard', '현재 진행 상황'), ('fundraising', '모금 안내'), ('timeline', '시간순 사건 기록'),
@@ -57,6 +59,19 @@ class LandingTests(TestCase):
         self.assertEqual(len(set(parser.links)), 72)
         self.assertContains(response, '기존 정리 E01~E30 보기')
         self.assertEqual(self.client.head('/').status_code, 200)
+
+    def test_devotion_reading_pages_are_public_and_return_home(self):
+        for path, title in (
+            ('/devotion/hymn-310/', '찬송가 310장 「아 하나님의 은혜로」'),
+            ('/devotion/acts-17-30-31/', '사도행전 17:30–31 · 개역개정'),
+        ):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertContains(response, f'<h1 id="devotion-title">{title}</h1>')
+                self.assertContains(response, 'target="_blank" rel="noopener noreferrer"')
+                self.assertContains(response, 'href="/#devotion">홈으로 돌아가기</a>')
+                self.assertEqual(self.client.head(path).status_code, 200)
+                self.assertNotEqual(self.client.post(path).status_code, 200)
 
     @override_settings(SHOW_BUSINESS_NUMBER_CARD=False)
     def test_registration_chart_replaces_default_business_number_card(self):
