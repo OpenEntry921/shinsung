@@ -4,6 +4,7 @@ from django.core.exceptions import ImproperlyConfigured
 BASE_DIR = Path(__file__).resolve().parent.parent
 APP_MODE = os.environ.get('APP_MODE', 'production')
 DEV = APP_MODE == 'development'
+MEMBER_BOARD_ENABLED = os.environ.get('MEMBER_BOARD_ENABLED', 'false') == 'true'
 DEMO_LOGIN_ENABLED = os.environ.get('DEMO_LOGIN_ENABLED', 'false') == 'true'
 SHOW_BUSINESS_NUMBER_CARD = os.environ.get('SHOW_BUSINESS_NUMBER_CARD', 'false') == 'true'
 PRIVATE_STORAGE_CONFIRMED = os.environ.get('PRIVATE_STORAGE_CONFIRMED','')=='true'

@@ -9,7 +9,7 @@ from django.core.management import call_command
 from .models import Member, CaseComment, Challenge, Revision, Request, Post, Case, Article, Document
 from .security import digest
 
-@override_settings(SECURE_SSL_REDIRECT=False, DEV=True)
+@override_settings(MEMBER_BOARD_ENABLED=True, SECURE_SSL_REDIRECT=False, DEV=True)
 class DiscussionTests(TestCase):
     def setUp(self):
         self.member=Member.objects.create(name='가상 작성자',phone='01000000000',synthetic=True)

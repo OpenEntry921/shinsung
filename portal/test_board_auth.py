@@ -12,7 +12,7 @@ LOGIN = '/board/auth/'
 VERIFY = '/board/verify/'
 
 
-@override_settings(SECURE_SSL_REDIRECT=False, DEV=True,
+@override_settings(MEMBER_BOARD_ENABLED=True, SECURE_SSL_REDIRECT=False, DEV=True,
                    **{name: '가상 운영 설정' if name in OPERATOR_POLICY_FIELDS else '' for name in POLICY_FIELDS})
 class BoardAuthenticationTests(TestCase):
     def setUp(self):
@@ -126,3 +126,37 @@ class BoardAuthenticationTests(TestCase):
         self.member.active = False
         self.member.save()
         self.assertEqual(self.client.get('/posts/').status_code, 403)
+
+
+@override_settings(MEMBER_BOARD_ENABLED=False, SECURE_SSL_REDIRECT=False)
+class BoardUnavailableTests(TestCase):
+    def test_disabled_for_visitors_members_and_staff(self):
+        from django.contrib.auth import get_user_model
+
+        from .testing import member_session
+
+        member = Member.objects.create(name='가상 교인', phone='01000000001', synthetic=True)
+        post = Post.objects.create(member=member, author_name=member.name, title='보존할 질문', body='본문')
+        normal_member = Client()
+        member_session(normal_member, member)
+        staff = Client()
+        staff.force_login(get_user_model().objects.create_user(username='board-test-staff', is_staff=True))
+        paths = (LOGIN, VERIFY, '/posts/', '/posts/?q=질문', '/posts/new/', f'/posts/{post.pk}/',
+                 f'/posts/{post.pk}/edit/', f'/posts/{post.pk}/delete/')
+        with patch('portal.board_auth.send_sms') as sender:
+            for client in (self.client, normal_member, staff):
+                home = client.get('/')
+                self.assertNotContains(home, f'href="{LOGIN}"')
+                self.assertNotContains(home, 'href="/posts/"')
+                for path in paths:
+                    for method in (client.get, client.post):
+                        with self.subTest(method=method.__name__, path=path):
+                            response = method(path)
+                            self.assertContains(response, '교인 질문 게시판은 현재 이용할 수 없습니다', status_code=503)
+                            self.assertContains(response, 'href="/">홈으로 돌아가기', status_code=503)
+            sender.assert_not_called()
+        post.refresh_from_db()
+        self.assertEqual(post.title, '보존할 질문')
+        self.assertIsNone(post.deleted_at)
+        self.assertFalse(Challenge.objects.exists())
+        self.assertNotIn('board_identity', self.client.session)

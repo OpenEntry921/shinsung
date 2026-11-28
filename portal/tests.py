@@ -11,7 +11,7 @@ from .models import *
 from .security import digest
 from .roster import parse
 
-@override_settings(DEV=True,SESSION_COOKIE_SECURE=False,CSRF_COOKIE_SECURE=False,SECURE_SSL_REDIRECT=False)
+@override_settings(MEMBER_BOARD_ENABLED=True, DEV=True,SESSION_COOKIE_SECURE=False,CSRF_COOKIE_SECURE=False,SECURE_SSL_REDIRECT=False)
 class PortalTests(TestCase):
     def setUp(self):
         self.member=Member.objects.create(name='가상교인A',phone='01000000001',synthetic=True)
