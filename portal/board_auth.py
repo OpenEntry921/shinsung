@@ -13,7 +13,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .access import member_approved, registration_ready
+from .access import OPERATOR_POLICY_FIELDS, member_approved
 from .models import Challenge, Member
 from .security import digest, keyed, limit, phone, send_sms
 
@@ -31,7 +31,7 @@ def eligible(member):
 
 
 def configured():
-    return registration_ready() and (settings.DEV or all((
+    return all(getattr(settings, name).strip() for name in OPERATOR_POLICY_FIELDS) and (settings.DEV or all((
         settings.SMS_API_KEY, settings.SMS_API_SECRET, settings.SMS_SENDER,
     )))
 
