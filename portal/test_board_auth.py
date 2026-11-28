@@ -4,7 +4,7 @@ from unittest.mock import patch
 from django.test import Client, TestCase, override_settings
 from django.utils import timezone
 
-from .access import POLICY_FIELDS
+from .access import OPERATOR_POLICY_FIELDS, POLICY_FIELDS
 from .models import Challenge, Member, Post, RateBucket
 from .testing import approve
 
@@ -13,7 +13,7 @@ VERIFY = '/board/verify/'
 
 
 @override_settings(SECURE_SSL_REDIRECT=False, DEV=True,
-                   **{name: '가상 운영 설정' for name in POLICY_FIELDS})
+                   **{name: '가상 운영 설정' if name in OPERATOR_POLICY_FIELDS else '' for name in POLICY_FIELDS})
 class BoardAuthenticationTests(TestCase):
     def setUp(self):
         self.member = Member.objects.create(name='가상 교인', phone='01000000001', synthetic=True)
@@ -28,6 +28,19 @@ class BoardAuthenticationTests(TestCase):
 
     def code(self):
         return self.sender.call_args.args[1]
+
+    @override_settings(DEV=False, SMS_API_KEY='test-key', SMS_API_SECRET='test-secret',
+                       SMS_SENDER='01000000000')
+    def test_production_request_uses_operator_and_sms_settings_only(self):
+        Member.objects.filter(pk=self.member.pk).update(synthetic=False)
+        for setting in (*OPERATOR_POLICY_FIELDS, 'SMS_API_KEY', 'SMS_API_SECRET', 'SMS_SENDER'):
+            with self.subTest(setting=setting), override_settings(**{setting: ''}):
+                self.assertRedirects(self.request_code(), VERIFY)
+                self.sender.assert_not_called()
+                RateBucket.objects.all().delete()
+        self.assertRedirects(self.request_code(), VERIFY)
+        self.sender.assert_called_once()
+        self.assertRedirects(self.client.post(VERIFY, {'code': self.code()}), '/posts/')
 
     def test_home_to_real_name_post_and_logout(self):
         self.assertContains(self.client.get('/'), f'href="{LOGIN}"')
