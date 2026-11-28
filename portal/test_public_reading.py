@@ -12,7 +12,7 @@ from .models import (
 from .testing import member_session
 
 
-@override_settings(SECURE_SSL_REDIRECT=False, SESSION_COOKIE_SECURE=False)
+@override_settings(MEMBER_BOARD_ENABLED=True, SECURE_SSL_REDIRECT=False, SESSION_COOKIE_SECURE=False)
 class PublicReadingTests(TestCase):
     def test_all_entries_direct_refresh_head_mobile_and_no_private_ui(self):
         from .reading_registry import reading_entries

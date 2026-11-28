@@ -13,7 +13,7 @@
 <a class="button" href="#dashboard">현재 진행 상황</a>
 <a class="button secondary" href="#fundraising">모금 안내</a>
 <a class="button secondary" href="#timeline">시간순 사건 기록</a>
-<a class="button secondary" href="{% url 'board_login' %}">교인 질문 게시판</a>
+{% if request.member_board_enabled %}<a class="button secondary" href="{% url 'board_login' %}">교인 질문 게시판</a>{% endif %}
 </nav>
 {% if show_business_number_card %}{% include 'portal/business_number_card.html' %}{% endif %}
 </section>

@@ -1,4 +1,4 @@
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.conf import settings
 from django.http import HttpResponseForbidden, HttpResponseNotFound
 from django.utils import timezone
@@ -57,6 +57,12 @@ class AccessMiddleware:
         return response
     def authorize(self,request):
         request.member = None
+        request.member_board_enabled = settings.MEMBER_BOARD_ENABLED
+        path = request.path_info
+        board_auth_path = path in ('/board/auth/', '/board/verify/')
+        board_posts_path = path == '/posts' or path.startswith('/posts/')
+        if not request.member_board_enabled and (board_auth_path or board_posts_path):
+            return render(request, 'portal/board_unavailable.html', status=503)
         # The temporary preparation login is isolated from member authentication.
         # Every preparation view performs its own session check, including writes.
         if request.path == '/prepare' or request.path.startswith('/prepare/'):
@@ -82,9 +88,9 @@ class AccessMiddleware:
             request.member = None
         path=request.path
         public=public_read(request) or path in ('/login/','/otp/','/exception/','/apply/','/logout/') or (request.method in ('GET','HEAD') and path.startswith('/static/'))
-        if request.path_info in ('/board/auth/', '/board/verify/'):
+        if board_auth_path:
             return self.get_response(request)
-        if request.path_info.startswith('/posts/') and not request.member and not request.user.is_staff:
+        if board_posts_path and not request.member and not request.user.is_staff:
             from .board_auth import board_member
             request.member = board_member(request)
             request.board_only = request.member is not None

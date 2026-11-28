@@ -3,7 +3,7 @@ from django.test import TestCase, override_settings
 from .models import Member,AccessApplication
 from .testing import member_session, approve
 
-@override_settings(SECURE_SSL_REDIRECT=False)
+@override_settings(MEMBER_BOARD_ENABLED=True, SECURE_SSL_REDIRECT=False)
 class RosterLoginTests(TestCase):
     def test_name_phone_and_legacy_sessions_cannot_read_any_private_route(self):
         member=Member.objects.create(name='가상 교인',phone='01000000000',synthetic=True)

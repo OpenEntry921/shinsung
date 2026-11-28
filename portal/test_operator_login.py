@@ -5,7 +5,7 @@ from django.contrib.auth.models import User, Permission
 from django.utils import timezone
 from .models import Member, CaseComment, AccessApplication, Audit, Revision
 
-@override_settings(SECURE_SSL_REDIRECT=False, SESSION_COOKIE_SECURE=False)
+@override_settings(MEMBER_BOARD_ENABLED=True, SECURE_SSL_REDIRECT=False, SESSION_COOKIE_SECURE=False)
 class OperatorLoginTests(TestCase):
     def setUp(self):
         self.operator = Member.objects.create(name='가상 기존 운영자', phone='01000000007', synthetic=True, legacy_operator=True)
